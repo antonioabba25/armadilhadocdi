@@ -1,281 +1,143 @@
 # Armadilha do CDI
 
-## Objetivo do projeto
-
-Este projeto nasce de uma exploração em notebook e está evoluindo para uma aplicação web simples.
-
-O escopo atual da aplicação é:
-
-- receber `data inicial`
-- receber `data final`
-- receber `valor inicial investido` em BRL
-- retornar um resultado analítico
-- retornar um gráfico comparativo
-
-O objetivo do produto não é apenas mostrar o rendimento nominal do CDI em reais.
-
-O foco real é responder se um valor aplicado em CDI entre duas datas preservou, perdeu ou ganhou poder relativo quando observado em dólar. Em outras palavras: a aplicação compara o crescimento nominal em BRL com a variação cambial do USD/BRL para revelar a possível "armadilha" de achar que o ganho em CDI foi suficiente.
-
-## Arquivos de inspiração
-
-Os dois arquivos de referência conceitual para este projeto são:
-
-- `exploracaonotebook/calc_armadilhacdi.py`
-- `calculo_inflacaoamericana.py`
-
-### Papel de `exploracaonotebook/calc_armadilhacdi.py`
-
-Esse é o arquivo principal de inspiração da regra de negócio atual.
-
-Ele mistura:
-
-- coleta de dados do Banco Central
-- rotinas de cache
-- fallback para datas sem cotação
-- cálculo analítico do investimento
-- geração de gráfico comparativo
-
-Ele não está estruturado como código de produção, mas define bem a essência funcional do projeto web.
-
-### Papel de `calculo_inflacaoamericana.py`
-
-Esse arquivo não representa o fluxo principal da aplicação atual, mas ajuda a esclarecer a intenção econômica mais ampla do projeto: raciocinar sobre preservação de poder de compra em moeda forte, especialmente em dólar.
-
-Ele serve como inspiração complementar porque:
-
-- reforça a leitura do problema como comparação de poder de compra, e não apenas de rentabilidade nominal
-- mostra uma abordagem de tratamento de séries históricas com datas de cobertura imperfeita
-- sugere uma possível linha futura de expansão analítica com inflação americana ou métricas reais em USD
-
-Para a versão atual da aplicação web, o núcleo obrigatório continua sendo `CDI + USD/BRL`. A lógica de inflação americana deve ser tratada como referência conceitual ou extensão futura, e não como dependência mínima do MVP.
-
-## Lógica de negócio identificada
-
-### 1. Fontes de dados
-
-O fluxo principal do notebook usa dados públicos do Banco Central do Brasil:
-
-- `CDI` pela série `12`
-- `USD/BRL` por PTAX via API Olinda e, em alguns trechos, também pela série `1`
-- `IPCA` pela série `433` para compor o gráfico histórico
-
-Fontes e abordagens usadas no notebook:
-
-- API `bcdata.sgs.12` em JSON para CDI
-- fallback SOAP do BCB para CDI
-- API Olinda PTAX para dólar venda
-- `python-bcb` com `sgs.get(...)` para consultas em bloco
-
-O arquivo `calculo_inflacaoamericana.py` usa dados do FRED para CPI dos EUA. Essa fonte não faz parte do contrato mínimo atual da aplicação, mas registra uma direção possível para análises futuras de poder de compra em dólar.
-
-## Regras funcionais principais
-
-### 2. Sincronização e cache
-
-O notebook tenta evitar dependência total de chamadas online a cada execução:
-
-- guarda cache local de CDI
-- guarda cache local de USD
-- atualiza quando o cache está vazio ou atrasado
-
-Isso é importante para a versão web, mas a implementação final deve decidir entre:
-
-- cache em arquivo local
-- cache em banco
-- atualização on-demand com memoização
-
-### 3. Fallback de datas sem cotação
-
-Nem toda data tem cotação disponível, especialmente fins de semana e feriados.
-
-O notebook resolve isso buscando o último valor disponível ao retroceder até 15 dias. Essa regra aparece para USD e é importante manter algo equivalente na aplicação web.
-
-Regra prática:
-
-- se não houver cotação exatamente na data pedida
-- procurar a cotação anterior mais próxima
-- limitar a retroação para evitar resultados silenciosamente errados
-
-### 4. Acúmulo do CDI
-
-O coração do cálculo é a capitalização diária das taxas de CDI:
-
-`fator_acumulado *= (1 + taxa_diaria / 100)`
-
-Depois:
-
-- `valor_final_brl = valor_inicial_brl * fator_acumulado`
-- `cdi_percentual = (fator_acumulado - 1) * 100`
-
-### 5. Conversão para dólar
-
-O notebook compara o capital investido com a taxa de câmbio do início e do fim:
-
-- `usd_inicial = valor_inicial_brl / cotacao_inicial`
-- `usd_final_com_cdi = valor_final_brl / cotacao_final`
-
-Com isso ele calcula o ganho real em dólar:
-
-`rentabilidade_usd_real = (usd_final_com_cdi / usd_inicial - 1) * 100`
-
-Essa é a métrica mais importante do projeto.
-
-Na prática, essa métrica representa a evolução do poder de compra em dólares de um capital que ficou aplicado em CDI em reais ao longo do período selecionado.
-
-## Saída analítica esperada
-
-A aplicação web deve, no mínimo, devolver:
-
-- período consultado
-- valor inicial em BRL
-- valor final corrigido pelo CDI em BRL
-- CDI acumulado no período
-- cotação USD/BRL inicial usada
-- cotação USD/BRL final usada
-- equivalente em USD no início
-- equivalente em USD no fim após correção pelo CDI
-- ganho real em USD
-
-## Saída gráfica esperada
-
-O notebook também aponta para um gráfico histórico comparativo. As séries calculadas ali são:
-
-- evolução acumulada do `CDI`
-- evolução acumulada do `IPCA`
-- variação acumulada do `USD`
-- ganho real em `USD` do capital corrigido por CDI
-
-Para o frontend, o gráfico pode começar simples, com foco em:
-
-- `CDI acumulado (%)`
-- `USD acumulado (%)`
-- `ganho real em USD (%)`
-
-O `IPCA` pode entrar como série opcional depois.
-
-Uma extensão futura possível, inspirada por `calculo_inflacaoamericana.py`, é incluir uma camada adicional de comparação com inflação americana ou outra métrica de poder de compra em USD, mas isso não deve complicar o MVP inicial.
-
-## Inconsistências atuais do notebook
-
-O arquivo de exploração tem blocos duplicados e regras ligeiramente diferentes entre si. Isso é esperado em material exploratório, mas a versão web deve consolidar uma única regra.
-
-### 1. Janela do CDI
-
-Há pelo menos duas variações no notebook:
-
-- `d_ini < data <= d_fim`
-- `d_ini <= data < d_fim`
-
-Além disso, em uma versão com `sgs.get(...)`, o código usa `df['cdi'][:-1]`, o que equivale a incluir o começo e excluir o último dia.
-
-### 2. Regra recomendada para a aplicação web
-
-A regra mais consistente no notebook parece ser:
-
-- incluir a taxa a partir da `data inicial`
-- excluir a `data final` do acúmulo do CDI
-
-Isto é, usar:
-
-`data_inicial <= data < data_final`
-
-Motivo:
-
-- essa regra aparece explicitamente no bloco marcado como "Regra exata validada"
-- ela também é compatível com o uso de `df['cdi'][:-1]`
-
-Se essa convenção for alterada depois, isso deve ser tratado como decisão de produto e não como detalhe técnico.
-
-## Arquitetura sugerida para a aplicação web
-
-Mesmo que a interface seja simples, a lógica já pede separação clara de responsabilidades:
-
-- `camada de coleta de dados`
-- `camada de cache`
-- `camada de cálculo`
-- `camada de serialização para API`
-- `camada de frontend para formulário + gráfico`
-
-Estrutura conceitual sugerida:
-
-- `services/data_providers`: buscar CDI, USD e eventualmente IPCA
-- `services/cache`: leitura e escrita de cache
-- `services/calculations`: regra financeira principal
-- `services/charts`: preparação das séries para visualização
-- `api`: endpoint que recebe datas e valor
-- `frontend`: formulário e componentes de resultado
-
-## Contrato mínimo de cálculo
-
-Uma função central da aplicação pode seguir esta ideia:
-
-```python
-def calcular_resultado(data_inicial: str, data_final: str, valor_inicial_brl: float) -> dict:
-    ...
+## Leitura correta do produto
+
+Este projeto não é uma calculadora genérica de rendimento CDI. Ele responde:
+
+> Se um capital ficou aplicado em CDI entre duas datas, a posição relativa em dólar melhorou, piorou ou apenas pareceu ter melhorado em reais?
+
+Toda tarefa futura deve preservar essa leitura. O resultado principal é a comparação entre crescimento nominal em BRL e poder relativo em USD.
+
+## Estado atual da base
+
+O MVP ativo é uma aplicação Streamlit com núcleo em Python puro:
+
+- entrada: `data inicial`, `data final`, `valor inicial investido` em BRL;
+- dados: CDI diário do SGS/BCB, série `12`;
+- dados: USD/BRL pela PTAX de venda via API Olinda/BCB;
+- saída: resumo analítico e gráfico comparativo;
+- cache local: JSON em `cache/`, ignorado pelo Git, usado como camada de sincronização com a fonte oficial, com lock por arquivo e escrita atômica;
+- sincronização operacional: `scripts/sync_market_data.py` para preaquecer/atualizar o cache fora da requisição do usuário.
+
+Os scripts exploratórios antigos foram removidos da base ativa. As decisões úteis deles foram consolidadas em `README.md`, `docs/metodologia.md`, `docs/arquitetura.md` e neste arquivo. Não recrie notebook/script exploratório como dependência do MVP; implemente mudanças nos módulos de produção e cubra com testes.
+
+## Arquitetura ativa
+
+```text
+app.py
+armadilha_cdi/
+  config.py
+  exceptions.py
+  models.py
+  services/
+    cache.py
+    calculations.py
+    charts.py
+    data_providers.py
+docs/
+scripts/
+tests/
 ```
 
-Resposta esperada:
+Responsabilidades:
+
+- `app.py`: UI Streamlit, formulário, renderização de métricas, gráfico e mensagens.
+- `armadilha_cdi/services/data_providers.py`: consultas ao Banco Central e sincronização com cache.
+- `armadilha_cdi/services/cache.py`: leitura, normalização, merge, lock e escrita atômica do cache JSON.
+- `armadilha_cdi/services/calculations.py`: regra financeira principal e fallback de cotação.
+- `armadilha_cdi/services/charts.py`: séries derivadas para visualização.
+- `armadilha_cdi/models.py`: dataclasses de troca entre camadas.
+- `armadilha_cdi/exceptions.py`: erros de domínio e dados de mercado.
+- `scripts/sync_market_data.py`: sincronização manual/agendável do cache.
+
+## Regras de negócio que não devem mudar sem decisão explícita
+
+- Datas sem dado oficial são resolvidas para a última data útil disponível.
+- A janela do CDI é `data_inicial_efetiva <= data < data_final_efetiva`.
+- O CDI é acumulado diariamente com `fator *= 1 + taxa_diaria / 100`.
+- USD/BRL usa PTAX de venda.
+- Se não houver PTAX na data solicitada, usar a cotação anterior mais próxima.
+- O fallback de USD/BRL é limitado por `MAX_USD_FALLBACK_DAYS`, hoje 15 dias.
+- A métrica central é `real_usd_return_percentage`.
+- A UI deve informar quando a data efetiva da cotação difere da data solicitada.
+- Cálculos, gráficos e visualizações devem considerar apenas dias úteis presentes nas séries oficiais.
+
+## Contrato mínimo do cálculo
+
+A função central é:
 
 ```python
-{
-    "periodo": "01/01/2020 a 01/01/2024",
-    "brl_ini": 10000.0,
-    "brl_fim": 14500.0,
-    "cdi_perc": 45.0,
-    "cotacao_ini": 4.02,
-    "cotacao_fim": 5.31,
-    "usd_ini": 2487.56,
-    "usd_fim_com_cdi": 2730.70,
-    "rentabilidade_usd_real": 9.77
-}
+calculate_result(
+    start_date: date,
+    end_date: date,
+    initial_brl: float,
+    cdi_rates: dict[str, float],
+    usd_rates: dict[str, float],
+) -> CalculationResult
 ```
 
-## Cuidados importantes
+Campos essenciais do resultado:
 
-- validar formato de data com clareza
-- impedir `data final` menor ou igual à `data inicial`
-- tratar ausência de dados de mercado de forma explícita
-- documentar qual cotação foi usada quando houver fallback
-- evitar recalcular todo o histórico a cada requisição
-- separar código exploratório de código de produção
+- `initial_brl`;
+- `final_brl`;
+- `cdi_percentage`;
+- `effective_start_date`;
+- `effective_end_date`;
+- `initial_usdbrl`;
+- `final_usdbrl`;
+- `initial_usd`;
+- `final_usd_with_cdi`;
+- `real_usd_return_percentage`;
+- `initial_fx_date`;
+- `final_fx_date`;
+- `cdi_days_used`.
 
-## Leitura correta do projeto
+## Comandos úteis
 
-Este projeto não é apenas uma "calculadora de rendimento CDI".
+Rodar testes:
 
-Ele é uma aplicação comparativa para responder:
+```bash
+python3 -m unittest discover -s tests -v
+```
 
-"Se eu deixei meu dinheiro rendendo CDI entre duas datas, minha posição relativa em dólar melhorou, piorou ou apenas pareceu ter melhorado em reais?"
+Rodar app:
 
-Essa pergunta deve orientar tanto o backend quanto a experiência do usuário.
+```bash
+streamlit run app.py
+```
 
-Em termos de produto, a leitura mais fiel é:
+Preaquecer/sincronizar cache:
 
-- entrada simples, com `data inicial`, `data final` e `valor inicial`
-- saída analítica objetiva, com foco em BRL final, USD inicial, USD final e ganho real em USD
-- gráfico comparativo que ajude a visualizar a diferença entre rendimento nominal e preservação de poder relativo em dólar
+```bash
+python3 scripts/sync_market_data.py --start 2020-01-01
+```
 
-## Próximo passo recomendado
+Checar arquivos rastreados e sujeira local:
 
-Ao transformar os scripts exploratórios em aplicação web, a prioridade deve ser:
+```bash
+git status --short
+git ls-files
+```
 
-1. consolidar uma única regra de cálculo
-2. extrair a lógica financeira para um módulo limpo e testável
-3. expor um endpoint simples para consulta
-4. montar uma UI com formulário, cards de resumo e gráfico comparativo
+## Diretrizes para futuras tarefas
 
-## Resumo executivo
+- Prefira mudar `armadilha_cdi/services/calculations.py` quando a regra financeira mudar.
+- Prefira mudar `armadilha_cdi/services/data_providers.py` quando a origem ou sincronização de dados mudar.
+- Prefira mudar `armadilha_cdi/services/cache.py` quando a persistência local, lock ou escrita do cache mudar.
+- Prefira mudar `armadilha_cdi/services/charts.py` quando a visualização precisar de novas séries derivadas.
+- Prefira mudar `scripts/sync_market_data.py` quando o fluxo operacional de preaquecer/atualizar cache mudar.
+- Mantenha `app.py` focado em interface; evite colocar regra financeira nele.
+- Não adicione dependências para resolver algo que a biblioteca padrão ou pandas já resolvem bem.
+- Preserve mensagens de erro claras para datas inválidas, valor inicial inválido e ausência de dados.
+- Ao alterar regra de cálculo, atualize `docs/metodologia.md`, `README.md` e os testes.
+- Ao alterar arquitetura ou responsabilidades, atualize `docs/arquitetura.md` e este arquivo.
+- Arquivos gerados como `cache/`, `__pycache__/`, `.pytest_cache/` e `.streamlit/` não devem ser versionados.
 
-Os arquivos exploratórios mostram que a lógica central do projeto já está validada em nível conceitual:
+## Escopo futuro, mas fora do MVP atual
 
-- buscar CDI e USD do BCB
-- acumular CDI diariamente
-- converter o capital inicial e final para USD
-- medir a rentabilidade real em dólar
-- exibir comparação analítica e gráfica
+- IPCA como série opcional no gráfico.
+- Inflação americana como camada adicional de poder de compra em USD.
+- Endpoint HTTP fora do Streamlit.
+- Cache em banco, storage compartilhado ou serviço gerenciado para produção com maior tráfego ou múltiplas instâncias.
 
-E, de forma complementar:
-
-- usar a ideia de inflação americana apenas como inspiração para leituras futuras de poder de compra em USD
-
-A aplicação web deve preservar essa essência, removendo duplicações, consolidando a regra temporal do cálculo e organizando o código em camadas mais previsíveis.
+Esses temas podem ser implementados depois, mas não devem complicar o fluxo mínimo `CDI + USD/BRL` sem necessidade de produto.

@@ -21,6 +21,8 @@ class MarketDataBundle:
 class CalculationResult:
     start_date: date
     end_date: date
+    effective_start_date: date
+    effective_end_date: date
     initial_brl: float
     final_brl: float
     cdi_factor: float
@@ -37,3 +39,10 @@ class CalculationResult:
     @property
     def period_label(self) -> str:
         return f"{self.start_date.strftime('%d/%m/%Y')} a {self.end_date.strftime('%d/%m/%Y')}"
+
+    @property
+    def effective_period_label(self) -> str:
+        return (
+            f"{self.effective_start_date.strftime('%d/%m/%Y')} "
+            f"a {self.effective_end_date.strftime('%d/%m/%Y')}"
+        )

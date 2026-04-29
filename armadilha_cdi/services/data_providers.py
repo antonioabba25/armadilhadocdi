@@ -9,6 +9,7 @@ from armadilha_cdi.config import (
     CDI_SERIES_URL,
     DATE_DISPLAY_FORMAT,
     DATE_STORAGE_FORMAT,
+    MAX_MARKET_DATE_FALLBACK_DAYS,
     MAX_USD_FALLBACK_DAYS,
     PTAX_QUERY_FORMAT,
     PTAX_URL_TEMPLATE,
@@ -29,15 +30,16 @@ class BCBMarketDataProvider:
     ) -> None:
         self.cache_repository = cache_repository
         self.timeout_seconds = timeout_seconds
-        self.session = requests.Session()
-        self.session.headers.update(BCB_HEADERS)
 
     def get_market_data(self, start_date: date, end_date: date) -> MarketDataBundle:
         """Return cached + synchronized market data for the requested window."""
         if end_date <= start_date:
             raise MarketDataError("A data final deve ser maior que a data inicial.")
 
-        cdi_rates = self._ensure_cdi_data(start_date=start_date, end_date=end_date)
+        cdi_rates = self._ensure_cdi_data(
+            start_date=start_date - timedelta(days=MAX_MARKET_DATE_FALLBACK_DAYS),
+            end_date=end_date,
+        )
         usd_rates = self._ensure_usd_data(
             start_date=start_date - timedelta(days=MAX_USD_FALLBACK_DAYS),
             end_date=end_date,
@@ -81,9 +83,18 @@ class BCBMarketDataProvider:
         if not series:
             return False
 
-        ordered_keys = sorted(series)
-        min_cached = date.fromisoformat(ordered_keys[0])
-        max_cached = date.fromisoformat(ordered_keys[-1])
+        cached_dates: list[date] = []
+        for iso_date in series:
+            try:
+                cached_dates.append(date.fromisoformat(iso_date))
+            except (TypeError, ValueError):
+                continue
+
+        if not cached_dates:
+            return False
+
+        min_cached = min(cached_dates)
+        max_cached = max(cached_dates)
         return (
             min_cached <= start_date
             and max_cached >= (end_date - timedelta(days=tolerance_days))
@@ -97,9 +108,10 @@ class BCBMarketDataProvider:
         }
 
         try:
-            response = self.session.get(
+            response = requests.get(
                 CDI_SERIES_URL,
                 params=params,
+                headers=BCB_HEADERS,
                 timeout=self.timeout_seconds,
             )
             response.raise_for_status()
@@ -128,7 +140,11 @@ class BCBMarketDataProvider:
             end=end_date.strftime(PTAX_QUERY_FORMAT),
         )
         try:
-            response = self.session.get(url, timeout=self.timeout_seconds)
+            response = requests.get(
+                url,
+                headers=BCB_HEADERS,
+                timeout=self.timeout_seconds,
+            )
             response.raise_for_status()
             payload = response.json()
         except requests.RequestException as exc:

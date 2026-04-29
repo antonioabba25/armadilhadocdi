@@ -21,15 +21,17 @@ O calculo parte de tres entradas obrigatorias:
 
 ## Regra temporal consolidada
 
-Depois de comparar os blocos do notebook exploratorio, a regra escolhida para o app foi:
+A regra temporal consolidada para o app e:
 
-`data_inicial <= data < data_final`
+`data_inicial_efetiva <= data < data_final_efetiva`
 
 Na pratica, isso significa:
 
-- a taxa de CDI da data inicial entra no acumulo;
-- a data final funciona como limite superior exclusivo;
-- essa convencao evita ambiguidades e reproduz a regra marcada como validada no material exploratorio.
+- se a data solicitada nao tiver dado oficial, o app usa a ultima data util disponivel na serie CDI;
+- a taxa de CDI da data inicial efetiva entra no acumulo;
+- a data final efetiva funciona como limite superior exclusivo;
+- fins de semana e feriados nao entram como linhas proprias em calculos ou graficos;
+- essa convencao evita ambiguidades e deve ser tratada como decisao de produto.
 
 ## Etapa 1: acumulacao do CDI
 
@@ -54,7 +56,7 @@ Nem toda data possui cotacao PTAX disponivel. Isso acontece, por exemplo, em fin
 
 Por isso, o app aplica uma regra explicita de fallback:
 
-- tenta encontrar a cotacao exata na data solicitada;
+- tenta encontrar a cotacao exata na data efetiva de mercado;
 - se nao encontrar, retrocede dia a dia;
 - limita a retroacao a 15 dias;
 - informa ao usuario quando a data efetivamente usada foi diferente da data pedida.
@@ -63,6 +65,14 @@ Essa decisao evita duas falhas comuns:
 
 - quebrar o calculo em datas sem cotacao;
 - usar uma cotacao antiga demais de forma silenciosa.
+
+## Cache e sincronizacao
+
+O cache local nao substitui a fonte oficial. Ele e uma camada de sincronizacao: o app consulta primeiro os JSONs locais, busca no Banco Central apenas quando a janela ainda nao esta coberta e grava os novos pontos para reutilizacao.
+
+Para publicacao, o caminho preferencial e preaquecer ou atualizar esse cache por `scripts/sync_market_data.py`, fora da interacao do usuario. O app ainda consegue sincronizar sob demanda quando faltar uma janela, mas essa deve ser uma contingencia, nao a rotina principal de operacao.
+
+O cache JSON usa lock por arquivo e escrita atomica para reduzir risco de corrupcao em acessos concorrentes. Essa protecao melhora o MVP em Streamlit, mas nao transforma o arquivo local em banco compartilhado para multiplas instancias.
 
 ## Etapa 3: conversao do capital para dolar
 
@@ -120,12 +130,16 @@ Leitura sugerida:
 - se a curva de ganho real em USD fica negativa, o investidor teve erosao de poder relativo em dolar;
 - se a curva de ganho real em USD sobe, o CDI compensou a variacao cambial e ainda gerou ganho relativo.
 
+As linhas do grafico sao geradas apenas para dias uteis presentes na serie CDI oficial. Quando o periodo solicitado comeca ou termina em fim de semana ou feriado, a visualizacao usa o periodo efetivo de mercado.
+
 ## O que esta fora do MVP
 
-O notebook exploratorio tambem cita IPCA e existe um arquivo complementar sobre inflacao americana. Isso ajuda a enquadrar o problema de forma mais ampla, mas nao faz parte do contrato minimo atual da aplicacao.
+O historico exploratorio tambem citava IPCA e inflacao americana. Isso ajuda a enquadrar o problema de forma mais ampla, mas nao faz parte do contrato minimo atual da aplicacao.
 
 Nesta versao, o nucleo obrigatorio continua sendo:
 
 - CDI
 - USD/BRL
 - comparacao de poder relativo em dolar
+
+As decisoes extraidas da fase exploratoria foram consolidadas nesta documentacao e nos testes. A regra operacional deve viver no pacote `armadilha_cdi/`.

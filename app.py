@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import pandas as pd
 import streamlit as st
 
-from armadilha_cdi.config import DEFAULT_CACHE_DIR
+from armadilha_cdi.config import DEFAULT_CACHE_DIR, EARLIEST_SUPPORTED_DATE
 from armadilha_cdi.exceptions import DomainValidationError, MarketDataError
 from armadilha_cdi.models import CalculationResult, MarketDataBundle
 from armadilha_cdi.services.cache import JsonFileCache
@@ -43,6 +43,19 @@ def quote_note(result: CalculationResult, quote_position: str) -> str:
     )
 
 
+def market_period_note(result: CalculationResult) -> str:
+    if (
+        result.start_date == result.effective_start_date
+        and result.end_date == result.effective_end_date
+    ):
+        return "Periodo efetivo de mercado igual ao periodo solicitado."
+
+    return (
+        "Periodo efetivo de mercado: "
+        f"{result.period_label} -> {result.effective_period_label}."
+    )
+
+
 def render_summary(result: CalculationResult) -> None:
     st.subheader("Resumo analitico")
 
@@ -58,22 +71,25 @@ def render_summary(result: CalculationResult) -> None:
 
     st.caption(quote_note(result, "inicial"))
     st.caption(quote_note(result, "final"))
+    st.caption(market_period_note(result))
 
     st.dataframe(
         pd.DataFrame(
             {
-            "Metrica": [
-                "Periodo",
-                "Cotacao USD/BRL inicial usada",
-                "Cotacao USD/BRL final usada",
-                "Dias uteis de CDI considerados",
-            ],
-            "Valor": [
-                result.period_label,
-                f"{result.initial_usdbrl:,.4f}",
-                f"{result.final_usdbrl:,.4f}",
-                str(result.cdi_days_used),
-            ],
+                "Metrica": [
+                    "Periodo solicitado",
+                    "Periodo efetivo de mercado",
+                    "Cotacao USD/BRL inicial usada",
+                    "Cotacao USD/BRL final usada",
+                    "Dias uteis de CDI considerados",
+                ],
+                "Valor": [
+                    result.period_label,
+                    result.effective_period_label,
+                    f"{result.initial_usdbrl:,.4f}",
+                    f"{result.final_usdbrl:,.4f}",
+                    str(result.cdi_days_used),
+                ],
             }
         ),
         use_container_width=True,
@@ -123,10 +139,27 @@ def main() -> None:
     default_end = today
     default_start = today - timedelta(days=365)
 
+    st.caption(
+        "Informe datas a partir de "
+        f"{EARLIEST_SUPPORTED_DATE.strftime('%d/%m/%Y')}."
+    )
+
     with st.form("analise_form"):
         col1, col2, col3 = st.columns(3)
-        start_date = col1.date_input("Data inicial", value=default_start, format="DD/MM/YYYY")
-        end_date = col2.date_input("Data final", value=default_end, format="DD/MM/YYYY")
+        start_date = col1.date_input(
+            "Data inicial",
+            value=default_start,
+            min_value=EARLIEST_SUPPORTED_DATE,
+            max_value=today,
+            format="DD/MM/YYYY",
+        )
+        end_date = col2.date_input(
+            "Data final",
+            value=default_end,
+            min_value=EARLIEST_SUPPORTED_DATE,
+            max_value=today,
+            format="DD/MM/YYYY",
+        )
         initial_brl = col3.number_input(
             "Valor inicial investido (BRL)",
             min_value=0.01,
@@ -163,9 +196,11 @@ def main() -> None:
         with st.expander("Metodologia usada"):
             st.markdown(
                 """
-                - O CDI e acumulado pela regra `data_inicial <= data < data_final`.
+                - Datas sem dado oficial sao resolvidas para o ultimo dia util disponivel.
+                - O CDI e acumulado pela regra `data_inicial_efetiva <= data < data_final_efetiva`.
                 - O dolar usa a cotacao PTAX de venda do Banco Central.
                 - Se nao houver cotacao na data exata, o app busca a ultima cotacao anterior em ate 15 dias.
+                - O grafico considera apenas dias uteis presentes nas series oficiais.
                 - O ganho real em USD mede a variacao do capital corrigido pelo CDI quando convertido para dolar no fim do periodo.
                 """
             )

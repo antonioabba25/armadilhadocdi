@@ -9,21 +9,23 @@
 - PTAX - conjunto de dados no portal de dados abertos: https://dadosabertos.bcb.gov.br/dataset/dolar-americano-usd-todos-os-boletins-diarios
 - FAQ do BCB sobre taxas divulgadas e PTAX: https://www.bcb.gov.br/meubc/faqs/p/o-que-significam-as-taxas-divulgadas-pelo-banco-central
 
-## Referencia complementar
+## Referencias complementares para extensoes futuras
 
 ### FRED / Federal Reserve Bank of St. Louis
 
 - CPIAUCSL - Consumer Price Index for All Urban Consumers: All Items in U.S. City Average: https://fred.stlouisfed.org/series/CPIAUCSL
 
-Essa serie nao entra no MVP atual do app, mas aparece como referencia conceitual para extensoes futuras de analise de poder de compra em USD.
+Essa serie nao entra no MVP atual do app, mas pode apoiar uma extensao futura de analise de poder de compra em USD.
 
-## Referencias internas do repositorio
+### IPCA / Banco Central
 
-- `exploracaonotebook/calc_armadilhacdi.py`: arquivo exploratorio principal que consolidou a intuicao do produto e a regra financeira atual.
-- `calculo_inflacaoamericana.py`: referencia complementar para a leitura do problema como preservacao de poder de compra em moeda forte.
+- IPCA - serie 433 do SGS/BCB: https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados
+
+Essa serie tambem esta fora do MVP atual, mas e uma candidata natural para enriquecer o grafico comparativo.
 
 ## Observacoes metodologicas
 
 - O app usa a serie `12` do SGS para CDI, conforme implementado em `armadilha_cdi/services/data_providers.py`.
 - O app usa a cotacao de venda (`cotacaoVenda`) da PTAX para USD/BRL.
 - A PTAX e uma taxa de referencia publica e nao necessariamente a taxa efetiva de uma operacao individual de cambio.
+- As referencias exploratorias antigas foram removidas da base ativa; a memoria tecnica do projeto esta consolidada em `README.md`, `AGENTS.md` e `docs/`.

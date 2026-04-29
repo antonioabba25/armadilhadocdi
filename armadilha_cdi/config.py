@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -9,7 +10,9 @@ DATE_STORAGE_FORMAT = "%Y-%m-%d"
 DATE_DISPLAY_FORMAT = "%d/%m/%Y"
 PTAX_QUERY_FORMAT = "%m-%d-%Y"
 
+EARLIEST_SUPPORTED_DATE = date(1986, 3, 6)
 MAX_USD_FALLBACK_DAYS = 15
+MAX_MARKET_DATE_FALLBACK_DAYS = 15
 REQUEST_TIMEOUT_SECONDS = 20
 
 BCB_HEADERS = {
