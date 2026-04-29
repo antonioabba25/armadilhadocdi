@@ -32,6 +32,46 @@ def format_percent(value: float) -> str:
     return f"{value:,.2f}%".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
+def format_percentage_points(value: float) -> str:
+    return f"{value:,.2f} p.p.".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def usd_variation_percentage(result: CalculationResult) -> float:
+    return ((result.final_usdbrl / result.initial_usdbrl) - 1) * 100
+
+
+def cdi_vs_usd_gap_percentage_points(result: CalculationResult) -> float:
+    return result.cdi_percentage - usd_variation_percentage(result)
+
+
+def result_interpretation(result: CalculationResult) -> tuple[str, str]:
+    usd_variation = usd_variation_percentage(result)
+    gap = cdi_vs_usd_gap_percentage_points(result)
+    absolute_gap = abs(gap)
+    usd_delta = result.final_usd_with_cdi - result.initial_usd
+
+    if abs(gap) < 0.005:
+        title = "O CDI praticamente empatou com a variacao do dolar."
+        comparison = "igual a"
+    elif gap > 0:
+        title = "A aplicacao no CDI compensou a variacao do dolar."
+        comparison = "acima da"
+    else:
+        title = "A aplicacao no CDI nao compensou a variacao do dolar."
+        comparison = "abaixo da"
+
+    details = (
+        f"No periodo efetivo, o CDI acumulou {format_percent(result.cdi_percentage)} "
+        f"em reais, enquanto o USD/BRL variou {format_percent(usd_variation)}. "
+        f"Assim, o CDI ficou {format_percentage_points(absolute_gap)} {comparison} "
+        "variacao do dolar. Em equivalente em USD, o capital saiu de "
+        f"{format_usd(result.initial_usd)} para {format_usd(result.final_usd_with_cdi)}, "
+        f"uma diferenca de {format_usd(usd_delta)} "
+        f"({format_percent(result.real_usd_return_percentage)})."
+    )
+    return title, details
+
+
 def quote_note(result: CalculationResult, quote_position: str) -> str:
     requested = result.start_date if quote_position == "inicial" else result.end_date
     effective = result.initial_fx_date if quote_position == "inicial" else result.final_fx_date
@@ -58,16 +98,26 @@ def market_period_note(result: CalculationResult) -> str:
 
 def render_summary(result: CalculationResult) -> None:
     st.subheader("Resumo analitico")
+    title, details = result_interpretation(result)
+    gap = cdi_vs_usd_gap_percentage_points(result)
+
+    if gap > 0.005:
+        st.success(f"**{title}** {details}")
+    elif gap < -0.005:
+        st.error(f"**{title}** {details}")
+    else:
+        st.info(f"**{title}** {details}")
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Valor inicial", format_brl(result.initial_brl))
     col2.metric("Valor final com CDI", format_brl(result.final_brl))
     col3.metric("CDI acumulado", format_percent(result.cdi_percentage))
 
-    col4, col5, col6 = st.columns(3)
+    col4, col5, col6, col7 = st.columns(4)
     col4.metric("USD no inicio", format_usd(result.initial_usd))
     col5.metric("USD no fim com CDI", format_usd(result.final_usd_with_cdi))
-    col6.metric("Ganho real em USD", format_percent(result.real_usd_return_percentage))
+    col6.metric("Variacao USD/BRL", format_percent(usd_variation_percentage(result)))
+    col7.metric("Ganho real em USD", format_percent(result.real_usd_return_percentage))
 
     st.caption(quote_note(result, "inicial"))
     st.caption(quote_note(result, "final"))
@@ -81,6 +131,8 @@ def render_summary(result: CalculationResult) -> None:
                     "Periodo efetivo de mercado",
                     "Cotacao USD/BRL inicial usada",
                     "Cotacao USD/BRL final usada",
+                    "Variacao acumulada do USD/BRL",
+                    "CDI acima/abaixo do USD/BRL",
                     "Dias uteis de CDI considerados",
                 ],
                 "Valor": [
@@ -88,6 +140,8 @@ def render_summary(result: CalculationResult) -> None:
                     result.effective_period_label,
                     f"{result.initial_usdbrl:,.4f}",
                     f"{result.final_usdbrl:,.4f}",
+                    format_percent(usd_variation_percentage(result)),
+                    format_percentage_points(cdi_vs_usd_gap_percentage_points(result)),
                     str(result.cdi_days_used),
                 ],
             }
@@ -196,12 +250,15 @@ def main() -> None:
         with st.expander("Metodologia usada"):
             st.markdown(
                 """
-                - Datas sem dado oficial sao resolvidas para o ultimo dia util disponivel.
-                - O CDI e acumulado pela regra `data_inicial_efetiva <= data < data_final_efetiva`.
-                - O dolar usa a cotacao PTAX de venda do Banco Central.
-                - Se nao houver cotacao na data exata, o app busca a ultima cotacao anterior em ate 15 dias.
-                - O grafico considera apenas dias uteis presentes nas series oficiais.
-                - O ganho real em USD mede a variacao do capital corrigido pelo CDI quando convertido para dolar no fim do periodo.
+                - O resultado compara o ganho nominal do capital em BRL pelo CDI com a variacao do USD/BRL no mesmo periodo efetivo de mercado.
+                - O CDI diario vem da serie 12 do SGS/BCB e e acumulado pela regra `data_inicial_efetiva <= data < data_final_efetiva`.
+                - O USD/BRL usa a cotacao PTAX de venda do Banco Central, obtida pela API Olinda/BCB.
+                - Calculos, metricas e grafico consideram apenas dias uteis presentes nas series oficiais; fins de semana e feriados nao sao interpolados.
+                - Datas sem dado oficial sao resolvidas para a ultima data util disponivel. Quando a PTAX nao existe na data efetiva, o app usa a cotacao anterior mais proxima, limitada a 15 dias.
+                - A diferenca "CDI acima/abaixo do USD/BRL" e medida em pontos percentuais: CDI acumulado menos variacao acumulada do dolar.
+                - O ganho real em USD mede se o capital corrigido pelo CDI compraria mais ou menos dolares no fim do periodo do que comprava no inicio.
+                - O calculo nao considera impostos, taxas, spread cambial, IOF, custos operacionais ou diferencas entre PTAX e cotacoes praticadas por uma instituicao.
+                - Esta analise e uma comparacao historica com dados oficiais; nao e recomendacao de investimento.
                 """
             )
 
