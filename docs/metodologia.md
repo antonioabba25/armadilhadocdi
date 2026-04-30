@@ -30,10 +30,13 @@ A regra temporal consolidada para o app e:
 Na pratica, isso significa:
 
 - se a data solicitada nao tiver dado oficial, o app usa a ultima data util disponivel na serie CDI;
+- na borda inicial do real, se nao houver CDI anterior permitido e a primeira observacao oficial estiver dentro da tolerancia de calendario, o app usa essa primeira data oficial;
 - a taxa de CDI da data inicial efetiva entra no acumulo;
 - a data final efetiva funciona como limite superior exclusivo;
 - fins de semana e feriados nao entram como linhas proprias em calculos ou graficos;
 - essa convencao evita ambiguidades e deve ser tratada como decisao de produto.
+
+Na serie 12 do BCB, o primeiro CDI oficial retornado a partir da circulacao do real e `04/07/1994`. Assim, uma consulta iniciada em `01/07/1994` e analisada com periodo efetivo a partir de `04/07/1994`, sem usar dados anteriores ao real e sem criar taxa sintetica para os dias sem observacao oficial.
 
 ## Etapa 1: acumulacao do CDI
 
@@ -73,6 +76,8 @@ Essa decisao evita duas falhas comuns:
 O cache nao substitui a fonte oficial. Ele e uma camada de sincronizacao: o app consulta primeiro os dados persistidos, busca no Banco Central apenas quando a janela ainda nao esta coberta e grava os novos pontos para reutilizacao.
 
 Na serie diaria do CDI, a busca no SGS/BCB e dividida em janelas menores com uma pequena pausa entre requisicoes. Esse fatiamento e apenas operacional: ele contorna limites da API em periodos longos e depois une os pontos pela data oficial, sem mudar a formula de acumulacao.
+
+Algumas janelas curtas podem nao conter nenhuma observacao oficial, como `01/07/1994` a `03/07/1994` na serie 12. Quando o SGS sinaliza uma dessas janelas como nao encontrada, o app trata a resposta como janela vazia e continua a sincronizacao das demais bordas.
 
 Para publicacao, o caminho preferencial e preaquecer ou atualizar esse cache por `scripts/sync_market_data.py`, fora da interacao do usuario. O app ainda consegue sincronizar sob demanda quando faltar uma janela, mas essa deve ser uma contingencia, nao a rotina principal de operacao.
 

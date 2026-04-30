@@ -139,6 +139,44 @@ class CalculationTests(unittest.TestCase):
         self.assertEqual(result.initial_fx_date, date(1994, 7, 1))
         self.assertAlmostEqual(result.cdi_factor, 1 + 0.20 / 100, places=10)
 
+    def test_real_circulation_start_date_uses_first_available_cdi_date(self) -> None:
+        result = calculate_result(
+            start_date=date(1994, 7, 1),
+            end_date=date(1994, 7, 5),
+            initial_brl=1000.0,
+            cdi_rates={
+                "1994-07-04": 0.20,
+                "1994-07-05": 0.30,
+            },
+            usd_rates={
+                "1994-07-01": 1.00,
+                "1994-07-04": 0.94,
+                "1994-07-05": 0.93,
+            },
+        )
+
+        self.assertEqual(result.effective_start_date, date(1994, 7, 4))
+        self.assertEqual(result.effective_end_date, date(1994, 7, 5))
+        self.assertEqual(result.initial_fx_date, date(1994, 7, 4))
+        self.assertAlmostEqual(result.cdi_factor, 1 + 0.20 / 100, places=10)
+        self.assertEqual(result.cdi_days_used, 1)
+
+    def test_real_circulation_start_date_rejects_distant_first_cdi_date(self) -> None:
+        with self.assertRaises(DataUnavailableError):
+            calculate_result(
+                start_date=date(1994, 7, 1),
+                end_date=date(1994, 8, 2),
+                initial_brl=1000.0,
+                cdi_rates={
+                    "1994-08-01": 0.20,
+                    "1994-08-02": 0.30,
+                },
+                usd_rates={
+                    "1994-08-01": 0.94,
+                    "1994-08-02": 0.93,
+                },
+            )
+
     def test_missing_quote_raises_data_unavailable(self) -> None:
         with self.assertRaises(DataUnavailableError):
             lookup_quote_with_fallback(

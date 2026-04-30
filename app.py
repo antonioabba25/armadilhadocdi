@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from html import escape
 
 import pandas as pd
 import streamlit as st
@@ -67,6 +68,591 @@ def cdi_vs_usd_gap_percentage_points(result: CalculationResult) -> float:
     return result.cdi_percentage - usd_variation_percentage(result)
 
 
+def html_escape(value: object) -> str:
+    return escape(str(value), quote=True)
+
+
+def render_frontpage_styles() -> None:
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;900&family=Space+Grotesk:wght@500;600&display=swap');
+
+        :root {
+            --surface: #faf9f6;
+            --surface-lowest: #ffffff;
+            --surface-low: #f4f3f1;
+            --surface-variant: #e3e2e0;
+            --on-surface: #1a1c1a;
+            --on-surface-variant: #4b4738;
+            --outline: #7c7766;
+            --outline-variant: #cdc6b3;
+            --primary: #6c5e06;
+            --primary-container: #c5b358;
+            --on-primary-container: #504500;
+            --secondary: #75584c;
+            --tertiary: #50606f;
+            --error: #ba1a1a;
+            --error-container: #ffdad6;
+            --info-container: #d4e4f6;
+        }
+
+        html, body, [data-testid="stAppViewContainer"] {
+            background: var(--surface);
+            color: var(--on-surface);
+            font-family: Inter, sans-serif;
+        }
+
+        [data-testid="stHeader"] {
+            background: transparent;
+        }
+
+        .block-container {
+            max-width: 1280px;
+            padding: 0 32px 64px;
+        }
+
+        .cdi-topbar {
+            min-height: 64px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--surface-variant);
+            margin: 0 -32px;
+            padding: 0 32px;
+            font-family: "Plus Jakarta Sans", sans-serif;
+        }
+
+        .cdi-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            letter-spacing: 0;
+            color: var(--on-surface);
+        }
+
+        .cdi-brand-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border: 1px solid var(--primary-container);
+            color: var(--primary);
+            font-size: 12px;
+        }
+
+        .cdi-hero {
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+            padding: 64px 0 32px;
+        }
+
+        .cdi-hero::before {
+            content: "";
+            position: absolute;
+            inset: 10% -12% auto;
+            height: 230px;
+            opacity: 0.12;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse at 50% 0%, rgba(197, 179, 88, 0.34), transparent 55%),
+                repeating-linear-gradient(164deg, transparent 0 18px, rgba(124, 119, 102, 0.32) 19px, transparent 20px);
+            transform: skewY(-7deg);
+        }
+
+        .cdi-hero-inner {
+            position: relative;
+            z-index: 1;
+            max-width: 820px;
+            margin: 0 auto;
+        }
+
+        .cdi-hero h1 {
+            margin: 0 0 16px;
+            font-family: "Plus Jakarta Sans", sans-serif;
+            font-size: clamp(42px, 5vw, 64px);
+            line-height: 1.05;
+            letter-spacing: 0;
+            font-weight: 800;
+            color: var(--on-surface);
+        }
+
+        .cdi-hero p {
+            max-width: 760px;
+            margin: 0 auto;
+            color: var(--on-surface-variant);
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        .cdi-date-note {
+            margin-top: 16px;
+            color: var(--primary);
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        div[data-testid="stForm"] {
+            background: var(--surface);
+            border: 1px solid var(--outline-variant);
+            border-radius: 8px;
+            padding: 28px;
+            box-shadow: 0 14px 40px rgba(80, 71, 45, 0.06);
+            margin-bottom: 32px;
+        }
+
+        div[data-testid="stForm"] label p {
+            font-family: "Space Grotesk", sans-serif;
+            color: var(--on-surface-variant);
+            font-size: 12px;
+            line-height: 1.2;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        div[data-testid="stForm"] input {
+            background: var(--surface-lowest);
+            border-color: var(--outline);
+            border-radius: 4px;
+            color: var(--on-surface);
+            font-family: Inter, sans-serif;
+        }
+
+        div[data-testid="stFormSubmitButton"] button {
+            width: 100%;
+            min-height: 42px;
+            margin-top: 28px;
+            border: 1px solid var(--primary-container);
+            border-radius: 4px;
+            background: var(--primary-container);
+            color: var(--on-primary-container);
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+
+        .cdi-alert {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            border: 1px solid var(--outline-variant);
+            border-radius: 8px;
+            padding: 24px;
+            background: var(--surface-low);
+            margin-bottom: 24px;
+        }
+
+        .cdi-alert-positive {
+            border-color: var(--primary-container);
+        }
+
+        .cdi-alert-negative {
+            border-color: var(--error-container);
+            background: #fff7f6;
+        }
+
+        .cdi-alert-neutral {
+            border-color: var(--info-container);
+            background: #f6f9fb;
+        }
+
+        .cdi-alert-icon {
+            margin-top: 3px;
+            color: var(--primary);
+            font-size: 21px;
+            line-height: 1;
+        }
+
+        .cdi-alert-negative .cdi-alert-icon {
+            color: var(--error);
+        }
+
+        .cdi-alert-neutral .cdi-alert-icon {
+            color: var(--tertiary);
+        }
+
+        .cdi-alert h2,
+        .cdi-panel-heading h2 {
+            margin: 0 0 4px;
+            font-family: "Plus Jakarta Sans", sans-serif;
+            color: var(--on-surface);
+            font-size: 24px;
+            line-height: 1.3;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+
+        .cdi-alert p {
+            margin: 0;
+            color: var(--on-surface-variant);
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .cdi-metric-card {
+            min-height: 132px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: var(--surface);
+            border: 1px solid var(--outline-variant);
+            border-radius: 8px;
+            padding: 24px;
+        }
+
+        .cdi-metric-card-highlight {
+            background: rgba(218, 199, 105, 0.18);
+            border-color: var(--primary-container);
+        }
+
+        .cdi-metric-label {
+            margin-bottom: 14px;
+            font-family: "Space Grotesk", sans-serif;
+            color: var(--on-surface-variant);
+            font-size: 12px;
+            line-height: 1.2;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .cdi-metric-value {
+            font-family: "Plus Jakarta Sans", sans-serif;
+            color: var(--on-surface);
+            font-size: clamp(24px, 2.3vw, 32px);
+            line-height: 1.15;
+            letter-spacing: 0;
+            font-weight: 800;
+            word-break: break-word;
+        }
+
+        .cdi-metric-value-positive,
+        .cdi-metric-card-highlight .cdi-metric-value {
+            color: var(--primary);
+        }
+
+        .cdi-metric-value-negative {
+            color: var(--error);
+        }
+
+        .cdi-metric-detail {
+            margin-top: 8px;
+            color: var(--on-surface-variant);
+            font-size: 13px;
+            line-height: 1.35;
+        }
+
+        .cdi-notes {
+            display: grid;
+            gap: 8px;
+            margin: 8px 0 32px;
+        }
+
+        .cdi-note {
+            color: var(--on-surface-variant);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .cdi-panel {
+            background: var(--surface);
+            border: 1px solid var(--outline-variant);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 8px;
+        }
+
+        .cdi-panel-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .cdi-panel-heading h2 {
+            margin: 0;
+        }
+
+        .cdi-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            justify-content: flex-end;
+            color: var(--on-surface-variant);
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+
+        .cdi-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .cdi-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            display: inline-block;
+        }
+
+        .cdi-dot-cdi { background: var(--primary); }
+        .cdi-dot-usd { background: var(--secondary); }
+        .cdi-dot-real { background: var(--tertiary); }
+
+        .cdi-table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--outline-variant);
+            border-radius: 8px;
+            background: var(--surface);
+            margin: 32px 0;
+        }
+
+        .cdi-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+            line-height: 1.45;
+        }
+
+        .cdi-table thead {
+            background: var(--surface-low);
+        }
+
+        .cdi-table th {
+            padding: 14px 16px;
+            text-align: left;
+            color: var(--on-surface-variant);
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--outline-variant);
+        }
+
+        .cdi-table td {
+            padding: 16px;
+            color: var(--on-surface);
+            border-bottom: 1px solid rgba(205, 198, 179, 0.8);
+        }
+
+        .cdi-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        div[data-testid="stExpander"] {
+            border-color: var(--outline-variant);
+            border-radius: 8px;
+            background: var(--surface);
+        }
+
+        div[data-testid="stExpander"] summary p {
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            color: var(--on-surface-variant);
+            text-transform: uppercase;
+        }
+
+        .cdi-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 24px;
+            border-top: 1px solid var(--surface-variant);
+            margin: 56px -32px 0;
+            padding: 32px;
+            color: var(--on-surface-variant);
+            font-family: "Plus Jakarta Sans", sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .cdi-footer strong {
+            color: var(--on-surface);
+            white-space: nowrap;
+        }
+
+        .cdi-footer-note {
+            max-width: 680px;
+            margin: 0;
+            text-align: right;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 760px) {
+            .block-container {
+                padding: 0 16px 40px;
+            }
+
+            .cdi-topbar {
+                margin: 0 -16px;
+                padding: 0 16px;
+            }
+
+            .cdi-hero {
+                padding: 40px 0 24px;
+            }
+
+            .cdi-hero h1 {
+                font-size: 34px;
+                line-height: 1.08;
+            }
+
+            .cdi-hero p {
+                font-size: 14px;
+                line-height: 1.55;
+            }
+
+            div[data-testid="stForm"] {
+                padding: 18px;
+            }
+
+            div[data-testid="stFormSubmitButton"] button {
+                margin-top: 8px;
+            }
+
+            .cdi-alert,
+            .cdi-metric-card,
+            .cdi-panel {
+                padding: 18px;
+            }
+
+            .cdi-panel-heading,
+            .cdi-footer {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .cdi-legend {
+                justify-content: flex-start;
+            }
+
+            .cdi-footer {
+                margin-left: -16px;
+                margin-right: -16px;
+                padding: 28px 16px;
+            }
+
+            .cdi-footer strong {
+                white-space: normal;
+            }
+
+            .cdi-footer-note {
+                text-align: left;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_top_bar() -> None:
+    st.markdown(
+        """
+        <header class="cdi-topbar">
+            <div class="cdi-brand">
+                <span class="cdi-brand-mark">∿</span>
+                <span>Armadilha do CDI</span>
+            </div>
+        </header>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_hero() -> None:
+    date_note = copy.DATE_RANGE_CAPTION_TEMPLATE.format(
+        earliest_date=EARLIEST_SUPPORTED_DATE.strftime("%d/%m/%Y")
+    )
+    st.markdown(
+        f"""
+        <section class="cdi-hero">
+            <div class="cdi-hero-inner">
+                <h1>O CDI venceu o Dólar? Descubra em segundos.</h1>
+                <p>{html_escape(copy.PAGE_DESCRIPTION)}</p>
+                <div class="cdi-date-note">{html_escape(date_note)}</div>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_footer() -> None:
+    st.markdown(
+        f"""
+        <footer class="cdi-footer">
+            <strong>{html_escape(copy.FOOTER_BRAND)}</strong>
+            <p class="cdi-footer-note">{html_escape(copy.FOOTER_NOTE)}</p>
+        </footer>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_status_message(message: str, status: str = "neutral") -> None:
+    icon = {"positive": "✓", "negative": "!", "neutral": "i"}.get(status, "i")
+    st.markdown(
+        f"""
+        <div class="cdi-alert cdi-alert-{html_escape(status)}">
+            <div class="cdi-alert-icon">{html_escape(icon)}</div>
+            <div><h2>{html_escape(message)}</h2></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_metric_card(
+    title: str,
+    value: str,
+    detail: str = "",
+    *,
+    highlight: bool = False,
+    tone: str = "",
+) -> None:
+    highlight_class = " cdi-metric-card-highlight" if highlight else ""
+    tone_class = f" cdi-metric-value-{tone}" if tone else ""
+    metric_body = (
+        f'<div class="cdi-metric-value{tone_class}">{html_escape(value)}</div>'
+    )
+    if detail:
+        metric_body += f'<div class="cdi-metric-detail">{html_escape(detail)}</div>'
+
+    st.markdown(
+        (
+            f'<div class="cdi-metric-card{highlight_class}">'
+            f'<div class="cdi-metric-label">{html_escape(title)}</div>'
+            f"<div>{metric_body}</div>"
+            "</div>"
+        ),
+        unsafe_allow_html=True,
+    )
+
+
+def result_status(result: CalculationResult) -> str:
+    gap = cdi_vs_usd_gap_percentage_points(result)
+    if gap > 0.005:
+        return "positive"
+    if gap < -0.005:
+        return "negative"
+    return "neutral"
+
+
 def result_interpretation(result: CalculationResult) -> tuple[str, str]:
     usd_variation = usd_variation_percentage(result)
     gap = cdi_vs_usd_gap_percentage_points(result)
@@ -130,63 +716,230 @@ def market_period_note(result: CalculationResult) -> str:
 
 
 def render_summary(result: CalculationResult) -> None:
-    st.subheader(copy.SUMMARY_TITLE)
     title, details = result_interpretation(result)
-    gap = cdi_vs_usd_gap_percentage_points(result)
+    status = result_status(result)
+    icon = "✓" if status == "positive" else "!" if status == "negative" else "i"
 
-    if gap > 0.005:
-        st.success(f"**{title}** {details}")
-    elif gap < -0.005:
-        st.error(f"**{title}** {details}")
-    else:
-        st.info(f"**{title}** {details}")
+    st.markdown(
+        f"""
+        <section id="comparativo">
+            <div class="cdi-alert cdi-alert-{html_escape(status)}">
+                <div class="cdi-alert-icon">{html_escape(icon)}</div>
+                <div>
+                    <h2>{html_escape(title)}</h2>
+                    <p>{html_escape(details)}</p>
+                </div>
+            </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
 
     col1, col2, col3 = st.columns(3)
-    col1.metric(copy.METRIC_INITIAL_BRL, format_brl(result.initial_brl))
-    col2.metric(copy.METRIC_FINAL_BRL, format_brl(result.final_brl))
-    col3.metric(copy.METRIC_CDI_ACCUMULATED, format_percent(result.cdi_percentage))
+    with col1:
+        render_metric_card(copy.METRIC_INITIAL_BRL, format_brl(result.initial_brl))
+    with col2:
+        render_metric_card(
+            copy.METRIC_FINAL_BRL,
+            format_brl(result.final_brl),
+            detail=f"{format_percent(result.cdi_percentage)} nominal",
+        )
+    with col3:
+        render_metric_card(
+            copy.METRIC_CDI_ACCUMULATED,
+            format_percent(result.cdi_percentage),
+            highlight=True,
+            tone="positive",
+        )
+
+    usd_variation = usd_variation_percentage(result)
+    real_usd_tone = "positive" if result.real_usd_return_percentage >= 0 else "negative"
+    usd_variation_tone = "negative" if usd_variation > result.cdi_percentage else ""
 
     col4, col5, col6, col7 = st.columns(4)
-    col4.metric(copy.METRIC_INITIAL_USD, format_usd(result.initial_usd))
-    col5.metric(copy.METRIC_FINAL_USD_WITH_CDI, format_usd(result.final_usd_with_cdi))
-    col6.metric(
-        copy.METRIC_USD_BRL_VARIATION,
-        format_percent(usd_variation_percentage(result)),
+    with col4:
+        render_metric_card(
+            copy.METRIC_INITIAL_USD,
+            format_usd(result.initial_usd),
+            detail=f"PTAX {result.initial_usdbrl:,.4f}",
+        )
+    with col5:
+        render_metric_card(
+            copy.METRIC_FINAL_USD_WITH_CDI,
+            format_usd(result.final_usd_with_cdi),
+            detail=f"Ganho real {format_percent(result.real_usd_return_percentage)}",
+            highlight=True,
+            tone=real_usd_tone,
+        )
+    with col6:
+        render_metric_card(
+            copy.METRIC_USD_BRL_VARIATION,
+            format_percent(usd_variation),
+            detail=f"{result.initial_usdbrl:,.4f} -> {result.final_usdbrl:,.4f}",
+            tone=usd_variation_tone,
+        )
+    with col7:
+        render_metric_card(
+            copy.METRIC_REAL_USD_GAIN,
+            format_percent(result.real_usd_return_percentage),
+            detail="Resultado relativo em USD",
+            tone=real_usd_tone,
+        )
+
+    render_notes(result)
+
+
+def render_notes(result: CalculationResult) -> None:
+    notes = [
+        quote_note(result, copy.QUOTE_POSITION_INITIAL),
+        quote_note(result, copy.QUOTE_POSITION_FINAL),
+        market_period_note(result),
+    ]
+    notes_html = "".join(
+        f'<div class="cdi-note">{html_escape(note)}</div>' for note in notes
     )
-    col7.metric(
-        copy.METRIC_REAL_USD_GAIN,
-        format_percent(result.real_usd_return_percentage),
+    st.markdown(f'<div class="cdi-notes">{notes_html}</div>', unsafe_allow_html=True)
+
+
+def technical_table_dataframe(result: CalculationResult) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            copy.TECHNICAL_TABLE_METRIC_COLUMN: [
+                copy.TECHNICAL_TABLE_PERIOD_REQUESTED,
+                copy.TECHNICAL_TABLE_EFFECTIVE_MARKET_PERIOD,
+                copy.TECHNICAL_TABLE_INITIAL_USD_BRL,
+                copy.TECHNICAL_TABLE_FINAL_USD_BRL,
+                copy.TECHNICAL_TABLE_USD_BRL_ACCUMULATED_VARIATION,
+                copy.TECHNICAL_TABLE_CDI_VS_USD_BRL,
+                copy.TECHNICAL_TABLE_CDI_BUSINESS_DAYS,
+            ],
+            copy.TECHNICAL_TABLE_VALUE_COLUMN: [
+                result.period_label,
+                result.effective_period_label,
+                f"{result.initial_usdbrl:,.4f}",
+                f"{result.final_usdbrl:,.4f}",
+                format_percent(usd_variation_percentage(result)),
+                format_percentage_points(cdi_vs_usd_gap_percentage_points(result)),
+                str(result.cdi_days_used),
+            ],
+        }
     )
 
-    st.caption(quote_note(result, copy.QUOTE_POSITION_INITIAL))
-    st.caption(quote_note(result, copy.QUOTE_POSITION_FINAL))
-    st.caption(market_period_note(result))
 
-    st.dataframe(
-        pd.DataFrame(
-            {
-                copy.TECHNICAL_TABLE_METRIC_COLUMN: [
-                    copy.TECHNICAL_TABLE_PERIOD_REQUESTED,
-                    copy.TECHNICAL_TABLE_EFFECTIVE_MARKET_PERIOD,
-                    copy.TECHNICAL_TABLE_INITIAL_USD_BRL,
-                    copy.TECHNICAL_TABLE_FINAL_USD_BRL,
-                    copy.TECHNICAL_TABLE_USD_BRL_ACCUMULATED_VARIATION,
-                    copy.TECHNICAL_TABLE_CDI_VS_USD_BRL,
-                    copy.TECHNICAL_TABLE_CDI_BUSINESS_DAYS,
+def render_technical_table(result: CalculationResult) -> None:
+    dataframe = technical_table_dataframe(result)
+    header_html = "".join(
+        f"<th>{html_escape(column)}</th>" for column in dataframe.columns
+    )
+    rows_html = ""
+    for _, row in dataframe.iterrows():
+        rows_html += "<tr>" + "".join(
+            f"<td>{html_escape(row[column])}</td>" for column in dataframe.columns
+        ) + "</tr>"
+
+    st.markdown(
+        f"""
+        <div class="cdi-table-wrap">
+            <table class="cdi-table">
+                <thead><tr>{header_html}</tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def chart_long_dataframe(chart_df: pd.DataFrame) -> pd.DataFrame:
+    visible_columns = [
+        copy.CHART_CDI_ACCUMULATED,
+        copy.CHART_USD_ACCUMULATED,
+        copy.CHART_REAL_USD_GAIN,
+    ]
+    plot_df = chart_df[[copy.CHART_DATE, *visible_columns]].copy()
+    plot_df[copy.CHART_DATE] = pd.to_datetime(plot_df[copy.CHART_DATE])
+    return plot_df.melt(
+        id_vars=copy.CHART_DATE,
+        value_vars=visible_columns,
+        var_name="Serie",
+        value_name="Percentual",
+    )
+
+
+def render_chart_panel(chart_df: pd.DataFrame) -> None:
+    st.markdown(
+        f"""
+        <div class="cdi-panel">
+            <div class="cdi-panel-heading">
+                <h2>{html_escape(copy.CHART_TITLE)}</h2>
+                <div class="cdi-legend">
+                    <span class="cdi-legend-item"><span class="cdi-dot cdi-dot-cdi"></span>CDI</span>
+                    <span class="cdi-legend-item"><span class="cdi-dot cdi-dot-usd"></span>USD/BRL</span>
+                    <span class="cdi-legend-item"><span class="cdi-dot cdi-dot-real"></span>Ganho real USD</span>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.vega_lite_chart(
+        chart_long_dataframe(chart_df),
+        {
+            "height": 380,
+            "mark": {"type": "line", "strokeWidth": 2.5, "interpolate": "monotone"},
+            "encoding": {
+                "x": {
+                    "field": copy.CHART_DATE,
+                    "type": "temporal",
+                    "title": None,
+                    "axis": {
+                        "labelColor": "#4b4738",
+                        "tickColor": "#cdc6b3",
+                        "gridColor": "#efeeeb",
+                    },
+                },
+                "y": {
+                    "field": "Percentual",
+                    "type": "quantitative",
+                    "title": "Acumulado (%)",
+                    "axis": {
+                        "labelColor": "#4b4738",
+                        "titleColor": "#4b4738",
+                        "tickColor": "#cdc6b3",
+                        "gridColor": "#e9e8e5",
+                    },
+                },
+                "color": {
+                    "field": "Serie",
+                    "type": "nominal",
+                    "scale": {
+                        "domain": [
+                            copy.CHART_CDI_ACCUMULATED,
+                            copy.CHART_USD_ACCUMULATED,
+                            copy.CHART_REAL_USD_GAIN,
+                        ],
+                        "range": ["#6c5e06", "#75584c", "#50606f"],
+                    },
+                    "legend": None,
+                },
+                "tooltip": [
+                    {"field": copy.CHART_DATE, "type": "temporal", "title": "Data"},
+                    {"field": "Serie", "type": "nominal", "title": "Série"},
+                    {
+                        "field": "Percentual",
+                        "type": "quantitative",
+                        "title": "Acumulado (%)",
+                        "format": ".2f",
+                    },
                 ],
-                copy.TECHNICAL_TABLE_VALUE_COLUMN: [
-                    result.period_label,
-                    result.effective_period_label,
-                    f"{result.initial_usdbrl:,.4f}",
-                    f"{result.final_usdbrl:,.4f}",
-                    format_percent(usd_variation_percentage(result)),
-                    format_percentage_points(cdi_vs_usd_gap_percentage_points(result)),
-                    str(result.cdi_days_used),
-                ],
-            }
-        ),
-        use_container_width=True,
-        hide_index=True,
+            },
+            "config": {
+                "background": "#faf9f6",
+                "view": {"stroke": "#cdc6b3"},
+                "font": "Inter",
+            },
+        },
+        width="stretch",
     )
 
 
@@ -204,39 +957,24 @@ def render_chart(
         initial_brl=initial_brl,
     )
 
-    st.subheader(copy.CHART_TITLE)
-    st.line_chart(
-        chart_df.set_index(copy.CHART_DATE)[
-            [
-                copy.CHART_CDI_ACCUMULATED,
-                copy.CHART_USD_ACCUMULATED,
-                copy.CHART_REAL_USD_GAIN,
-            ]
-        ],
-        use_container_width=True,
-    )
+    render_chart_panel(chart_df)
 
     with st.expander(copy.CHART_DATA_EXPANDER_LABEL):
-        st.dataframe(chart_df, use_container_width=True, hide_index=True)
+        st.dataframe(chart_df, width="stretch", hide_index=True)
 
 
 def main() -> None:
     st.set_page_config(page_title=copy.PAGE_TITLE, layout="wide")
-    st.title(copy.PAGE_TITLE)
-    st.write(copy.PAGE_DESCRIPTION)
+    render_frontpage_styles()
+    render_top_bar()
+    render_hero()
 
     today = date.today()
     default_end = today
     default_start = today - timedelta(days=365)
 
-    st.caption(
-        copy.DATE_RANGE_CAPTION_TEMPLATE.format(
-            earliest_date=EARLIEST_SUPPORTED_DATE.strftime("%d/%m/%Y")
-        )
-    )
-
     with st.form("analise_form"):
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns([1, 1, 1, 0.78])
         start_date = col1.date_input(
             copy.START_DATE_LABEL,
             value=default_start,
@@ -258,10 +996,12 @@ def main() -> None:
             step=100.00,
             format="%.2f",
         )
-        submitted = st.form_submit_button(copy.SUBMIT_BUTTON_LABEL)
+        with col4:
+            submitted = st.form_submit_button(copy.SUBMIT_BUTTON_LABEL)
 
     if not submitted:
-        st.info(copy.EMPTY_STATE_MESSAGE)
+        render_status_message(copy.EMPTY_STATE_MESSAGE, "neutral")
+        render_footer()
         return
 
     try:
@@ -283,14 +1023,19 @@ def main() -> None:
             initial_brl=initial_brl,
             market_data=market_data,
         )
+        render_technical_table(result)
 
         with st.expander(copy.METHODOLOGY_EXPANDER_LABEL):
+            st.markdown('<div id="metodologia"></div>', unsafe_allow_html=True)
             st.markdown(copy.METHODOLOGY_TEXT)
+        render_footer()
 
     except (DomainValidationError, MarketDataError, CacheConfigurationError) as exc:
-        st.error(str(exc))
+        render_status_message(str(exc), "negative")
+        render_footer()
     except Exception as exc:  # pragma: no cover - safeguard for UI
-        st.error(copy.UNEXPECTED_ERROR_TEMPLATE.format(error=exc))
+        render_status_message(copy.UNEXPECTED_ERROR_TEMPLATE.format(error=exc), "negative")
+        render_footer()
 
 
 if __name__ == "__main__":

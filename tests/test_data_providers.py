@@ -217,6 +217,72 @@ class MarketDataProviderTests(unittest.TestCase):
                     end_date=date(2026, 3, 31),
                 )
 
+    def test_fetch_cdi_rates_treats_not_found_status_as_empty_window(self) -> None:
+        provider = BCBMarketDataProvider(cache_repository=mock.Mock())
+
+        with mock.patch(
+            "armadilha_cdi.services.data_providers.requests.get",
+            return_value=FakeResponse(
+                payload={
+                    "erro": {
+                        "statusCode": 404,
+                        "detail": (
+                            "br.gov.bcb.pec.sgs.comum.excecoes."
+                            "SGSNegocioException: Value(s) not found"
+                        ),
+                    }
+                },
+                status_code=404,
+            ),
+        ):
+            result = provider._fetch_cdi_rates_chunk(
+                start_date=date(1994, 7, 1),
+                end_date=date(1994, 7, 3),
+            )
+
+        self.assertEqual(result, {})
+
+    def test_fetch_cdi_rates_treats_cached_not_found_payload_as_empty_window(self) -> None:
+        provider = BCBMarketDataProvider(cache_repository=mock.Mock())
+
+        with mock.patch(
+            "armadilha_cdi.services.data_providers.requests.get",
+            return_value=FakeResponse(
+                payload={
+                    "erro": {
+                        "statusCode": 404,
+                        "detail": (
+                            "br.gov.bcb.pec.sgs.comum.excecoes."
+                            "SGSNegocioException: Value(s) not found"
+                        ),
+                    }
+                },
+                status_code=200,
+            ),
+        ):
+            result = provider._fetch_cdi_rates_chunk(
+                start_date=date(1994, 7, 1),
+                end_date=date(1994, 7, 3),
+            )
+
+        self.assertEqual(result, {})
+
+    def test_fetch_cdi_rates_does_not_hide_unrelated_not_found_response(self) -> None:
+        provider = BCBMarketDataProvider(cache_repository=mock.Mock())
+
+        with mock.patch(
+            "armadilha_cdi.services.data_providers.requests.get",
+            return_value=FakeResponse(
+                payload={"error": "endpoint not found"},
+                status_code=404,
+            ),
+        ):
+            with self.assertRaisesRegex(MarketDataError, "endpoint not found"):
+                provider._fetch_cdi_rates_chunk(
+                    start_date=date(1994, 7, 1),
+                    end_date=date(1994, 7, 3),
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

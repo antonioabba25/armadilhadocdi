@@ -11,6 +11,11 @@ START_DATE_LABEL = "Data inicial"
 END_DATE_LABEL = "Data final"
 INITIAL_BRL_LABEL = "Valor inicial investido (BRL)"
 SUBMIT_BUTTON_LABEL = "Analisar periodo"
+FOOTER_BRAND = "Armadilha do CDI"
+FOOTER_NOTE = (
+    "CDI SGS/BCB serie 12 e USD/BRL PTAX venda. Comparacao historica, sem "
+    "impostos, taxas ou recomendacao de investimento."
+)
 
 EMPTY_STATE_MESSAGE = (
     "Preencha o formulario e clique em 'Analisar periodo' para gerar o resultado."

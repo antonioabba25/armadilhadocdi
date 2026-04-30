@@ -58,7 +58,7 @@ A janela oficial do CDI e:
 data_inicial_efetiva <= data < data_final_efetiva
 ```
 
-Quando a data inicial ou final solicitada nao possui dado oficial de mercado, o app usa a ultima data util disponivel na serie CDI. A data final efetiva continua sendo o limite superior exclusivo.
+Quando a data inicial ou final solicitada nao possui dado oficial de mercado, o app usa a ultima data util disponivel na serie CDI. Ha uma excecao na borda inicial do real: se a data inicial solicitada estiver antes do primeiro CDI oficial disponivel, mas em ou depois de 01/07/1994, o app usa o primeiro CDI oficial disponivel dentro da tolerancia de calendario. Na serie 12 do BCB, isso permite que `01/07/1994` seja analisado com periodo efetivo a partir de `04/07/1994`. A data final efetiva continua sendo o limite superior exclusivo.
 
 Para cada taxa diaria da janela:
 
@@ -169,7 +169,7 @@ python3 scripts/sync_market_data.py --start 2020-01-01
 
 O cache funciona como camada de sincronizacao com o Banco Central: o app consulta primeiro os dados persistidos, completa as janelas ausentes na fonte oficial e grava o merge para consultas futuras.
 
-As consultas de CDI ao SGS/BCB sao fatiadas internamente em janelas menores, com uma pequena pausa entre requisicoes. Isso contorna limites de janela em series diarias e reduz falhas em periodos longos sem alterar a regra de calculo.
+As consultas de CDI ao SGS/BCB sao fatiadas internamente em janelas menores, com uma pequena pausa entre requisicoes. Isso contorna limites de janela em series diarias e reduz falhas em periodos longos sem alterar a regra de calculo. Quando uma janela curta nao possui nenhum ponto oficial e o SGS responde como nao encontrada, o app trata essa borda como janela vazia e continua usando os pontos oficiais existentes no cache ou nas demais janelas.
 
 Por padrao, o backend e JSON local em `cache/`, ignorado pelo Git. Ele e adequado para desenvolvimento e execucao local. Pode ser apagado quando necessario; o app recria os arquivos ao consultar o Banco Central novamente.
 

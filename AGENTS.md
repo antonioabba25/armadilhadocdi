@@ -19,6 +19,7 @@ O MVP ativo é uma aplicação Streamlit com núcleo em Python puro:
 - saída: resumo analítico e gráfico comparativo;
 - cache configurável: JSON local em `cache/` para desenvolvimento, ou Postgres/Supabase para publicação;
 - sincronização sob demanda busca apenas bordas ausentes quando o cache já cobre parte da janela;
+- bordas curtas de CDI sem observações oficiais no SGS/BCB são tratadas como janelas vazias, não como falha fatal;
 - cache local com lock por arquivo e escrita atômica; cache Postgres/Supabase com `UPSERT` transacional por série e data;
 - sincronização operacional: `scripts/sync_market_data.py` para preaquecer/atualizar o cache fora da requisição do usuário.
 
@@ -56,6 +57,7 @@ Responsabilidades:
 ## Regras de negócio que não devem mudar sem decisão explícita
 
 - Datas sem dado oficial são resolvidas para a última data útil disponível.
+- Na borda inicial do real, quando não houver CDI anterior permitido, a data inicial pode ser resolvida para o primeiro CDI oficial disponível dentro da tolerância de calendário.
 - A data inicial deve ser 01/07/1994 ou posterior; dados anteriores à entrada em circulação do real brasileiro não devem ser usados como fallback inicial.
 - A janela do CDI é `data_inicial_efetiva <= data < data_final_efetiva`.
 - O CDI é acumulado diariamente com `fator *= 1 + taxa_diaria / 100`.

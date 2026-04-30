@@ -234,6 +234,8 @@ class BCBMarketDataProvider:
                 headers=BCB_HEADERS,
                 timeout=self.timeout_seconds,
             )
+            if self._is_empty_cdi_window_response(response):
+                return {}
             if response.status_code >= 400:
                 detail = self._response_error_detail(response)
                 if detail:
@@ -252,6 +254,9 @@ class BCBMarketDataProvider:
                 "Resposta invalida ao consultar o CDI."
             )
             raise MarketDataError(message) from exc
+
+        if self._is_empty_cdi_window_payload(payload):
+            return {}
 
         if not isinstance(payload, list):
             detail = self._payload_error_detail(payload)
@@ -274,6 +279,30 @@ class BCBMarketDataProvider:
         return parsed
 
     @classmethod
+    def _is_empty_cdi_window_response(cls, response: requests.Response) -> bool:
+        if response.status_code != 404:
+            return False
+
+        try:
+            payload = response.json()
+        except ValueError:
+            return False
+
+        return cls._payload_indicates_values_not_found(payload)
+
+    @classmethod
+    def _is_empty_cdi_window_payload(cls, payload: object) -> bool:
+        return (
+            cls._payload_error_status_code(payload) == 404
+            and cls._payload_indicates_values_not_found(payload)
+        )
+
+    @classmethod
+    def _payload_indicates_values_not_found(cls, payload: object) -> bool:
+        detail = cls._payload_error_detail(payload).lower()
+        return "value(s) not found" in detail or "sgsnegocioexception" in detail
+
+    @classmethod
     def _response_error_detail(cls, response: requests.Response | None) -> str:
         if response is None:
             return ""
@@ -290,15 +319,45 @@ class BCBMarketDataProvider:
 
         return cls._payload_error_detail(payload)
 
+    @classmethod
+    def _payload_error_status_code(cls, payload: object) -> int | None:
+        if not isinstance(payload, dict):
+            return None
+
+        for key in ("statusCode", "status_code", "status"):
+            status_code = cls._coerce_status_code(payload.get(key))
+            if status_code is not None:
+                return status_code
+
+        nested_error = payload.get("erro")
+        if isinstance(nested_error, dict):
+            return cls._payload_error_status_code(nested_error)
+
+        return None
+
+    @staticmethod
+    def _coerce_status_code(value: object) -> int | None:
+        try:
+            return int(value)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return None
+
     @staticmethod
     def _payload_error_detail(payload: object) -> str:
         if not isinstance(payload, dict):
             return ""
 
-        for key in ("message", "error"):
+        for key in ("message", "error", "detail"):
             value = payload.get(key)
             if isinstance(value, str) and value.strip():
                 return value.strip()
+
+        nested_error = payload.get("erro")
+        if isinstance(nested_error, dict):
+            for key in ("message", "error", "detail"):
+                value = nested_error.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
         return ""
 
     def _fetch_usd_rates(self, start_date: date, end_date: date) -> dict[str, float]:

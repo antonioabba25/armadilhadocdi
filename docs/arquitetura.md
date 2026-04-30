@@ -32,6 +32,7 @@ Responsabilidades:
 - consultar PTAX USD/BRL no Banco Central;
 - sincronizar dados com o cache configurado;
 - buscar apenas as bordas ausentes quando o cache ja cobre parte da janela;
+- tratar bordas de CDI sem observacoes oficiais como janelas vazias quando o SGS nao retorna dados;
 - devolver um `MarketDataBundle` pronto para a camada de calculo.
 
 ### Cache
@@ -71,6 +72,7 @@ Responsabilidades:
 - validar entradas de dominio;
 - impedir periodos iniciados antes da entrada em circulacao do real brasileiro, em 01/07/1994;
 - resolver datas solicitadas para dias uteis oficiais;
+- resolver a borda inicial do real para o primeiro CDI oficial disponivel quando nao ha CDI anterior permitido;
 - aplicar a janela oficial do CDI sobre o periodo efetivo;
 - resolver cotacoes com fallback;
 - calcular BRL final, USD inicial, USD final e rentabilidade real em USD.
@@ -123,7 +125,7 @@ create table if not exists market_rates (
 
 - CDI acumulado com `data_inicial_efetiva <= data < data_final_efetiva`
 - data inicial em 01/07/1994 ou depois, sem fallback para dados anteriores ao real
-- datas sem dado oficial resolvidas para o ultimo dia util disponivel
+- datas sem dado oficial resolvidas para o ultimo dia util disponivel, exceto a borda inicial sem CDI anterior permitido, que pode usar o primeiro CDI oficial dentro da tolerancia
 - cotacao USD/BRL com fallback de ate 15 dias para tras
 - metrica principal: ganho real em USD
 - notificacao explicita quando a cotacao usada nao coincide com a data solicitada

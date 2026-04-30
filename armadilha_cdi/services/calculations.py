@@ -91,11 +91,23 @@ class MarketDateResolver:
 
         self._ordered_dates = sorted(set(self._ordered_dates))
 
-    def lookup(self, target_date: date) -> date:
+    def lookup(
+        self,
+        target_date: date,
+        allow_forward_if_before_first: bool = False,
+    ) -> date:
         index = bisect_right(self._ordered_dates, target_date) - 1
         if index >= 0:
             effective_date = self._ordered_dates[index]
             if (target_date - effective_date).days <= self.max_days_back:
+                return effective_date
+
+        if allow_forward_if_before_first and self._ordered_dates:
+            effective_date = self._ordered_dates[0]
+            if (
+                target_date <= effective_date
+                and (effective_date - target_date).days <= self.max_days_back
+            ):
                 return effective_date
 
         raise DataUnavailableError(
@@ -121,7 +133,10 @@ def resolve_cdi_period(
         label="CDI",
         min_date=EARLIEST_SUPPORTED_DATE,
     )
-    effective_start_date = resolver.lookup(start_date)
+    effective_start_date = resolver.lookup(
+        start_date,
+        allow_forward_if_before_first=True,
+    )
     effective_end_date = resolver.lookup(end_date)
 
     if effective_end_date <= effective_start_date:
