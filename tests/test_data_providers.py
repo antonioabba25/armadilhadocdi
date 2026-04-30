@@ -59,6 +59,48 @@ class MarketDataProviderTests(unittest.TestCase):
             )
         )
 
+    def test_missing_fetch_windows_fetches_only_uncached_suffix(self) -> None:
+        self.assertEqual(
+            BCBMarketDataProvider._missing_fetch_windows(
+                cached={
+                    "2024-01-01": 0.1,
+                    "2024-01-10": 0.2,
+                },
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 1, 20),
+                tolerance_days=3,
+            ),
+            [(date(2024, 1, 11), date(2024, 1, 20))],
+        )
+
+    def test_missing_fetch_windows_fetches_only_uncached_prefix(self) -> None:
+        self.assertEqual(
+            BCBMarketDataProvider._missing_fetch_windows(
+                cached={
+                    "2024-01-10": 0.1,
+                    "2024-01-20": 0.2,
+                },
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 1, 20),
+                tolerance_days=3,
+            ),
+            [(date(2024, 1, 1), date(2024, 1, 9))],
+        )
+
+    def test_missing_fetch_windows_does_not_backfill_old_gap_before_request(self) -> None:
+        self.assertEqual(
+            BCBMarketDataProvider._missing_fetch_windows(
+                cached={
+                    "2001-01-01": 0.1,
+                    "2001-01-10": 0.2,
+                },
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 1, 20),
+                tolerance_days=3,
+            ),
+            [(date(2024, 1, 1), date(2024, 1, 20))],
+        )
+
     def test_get_market_data_rejects_start_date_before_real_circulation(self) -> None:
         provider = BCBMarketDataProvider(cache_repository=mock.Mock())
 

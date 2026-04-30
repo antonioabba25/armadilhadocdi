@@ -40,6 +40,13 @@ class JsonFileCacheTests(unittest.TestCase):
 
             self.assertEqual(JsonFileCache(cache_dir).load("series.json"), {})
 
+    def test_rejects_cache_names_outside_root_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cache = JsonFileCache(Path(temp_dir))
+
+            with self.assertRaises(ValueError):
+                cache.load("../series.json")
+
     def test_save_replaces_file_with_valid_json(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = JsonFileCache(Path(temp_dir))

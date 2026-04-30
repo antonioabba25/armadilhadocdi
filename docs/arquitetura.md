@@ -31,6 +31,7 @@ Responsabilidades:
 - consultar CDI no Banco Central;
 - consultar PTAX USD/BRL no Banco Central;
 - sincronizar dados com o cache configurado;
+- buscar apenas as bordas ausentes quando o cache ja cobre parte da janela;
 - devolver um `MarketDataBundle` pronto para a camada de calculo.
 
 ### Cache
@@ -99,7 +100,7 @@ Responsabilidades:
 
 1. O usuario informa data inicial, data final e valor inicial em BRL.
 2. A interface pede ao provider os dados de mercado necessarios para a janela selecionada.
-3. O provider consulta o cache configurado e completa a janela no Banco Central quando necessario. Para CDI, janelas longas sao fatiadas em requisicoes menores ao SGS/BCB, com breve pausa entre chamadas.
+3. O provider consulta o cache configurado e completa apenas as bordas ausentes da janela no Banco Central quando necessario. Para CDI, janelas longas sao fatiadas em requisicoes menores ao SGS/BCB, com breve pausa entre chamadas.
 4. A camada de calculo resolve o periodo efetivo de mercado, acumula o CDI e resolve as cotacoes USD/BRL com fallback.
 5. A camada de grafico prepara a serie comparativa em dias uteis oficiais.
 6. A interface apresenta o resumo analitico e o grafico.

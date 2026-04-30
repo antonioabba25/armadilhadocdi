@@ -74,7 +74,17 @@ class BCBMarketDataProvider:
         if self._covers_window(cached, start_date, end_date, tolerance_days=3):
             return cached
 
-        fresh = self._fetch_cdi_rates(start_date=start_date, end_date=end_date)
+        fresh: dict[str, float] = {}
+        for fetch_start, fetch_end in self._missing_fetch_windows(
+            cached=cached,
+            start_date=start_date,
+            end_date=end_date,
+            tolerance_days=3,
+        ):
+            fresh.update(
+                self._fetch_cdi_rates(start_date=fetch_start, end_date=fetch_end)
+            )
+
         if not fresh and not cached:
             raise MarketDataError("Nao foi possivel obter os dados de CDI do Banco Central.")
 
@@ -90,34 +100,87 @@ class BCBMarketDataProvider:
         ):
             return cached
 
-        fresh = self._fetch_usd_rates(start_date=start_date, end_date=end_date)
+        fresh: dict[str, float] = {}
+        for fetch_start, fetch_end in self._missing_fetch_windows(
+            cached=cached,
+            start_date=start_date,
+            end_date=end_date,
+            tolerance_days=MAX_USD_FALLBACK_DAYS,
+        ):
+            fresh.update(
+                self._fetch_usd_rates(start_date=fetch_start, end_date=fetch_end)
+            )
+
         if not fresh and not cached:
             raise MarketDataError("Nao foi possivel obter as cotacoes USD/BRL do Banco Central.")
 
         return self.cache_repository.merge("usd.json", fresh)
 
+    @classmethod
+    def _missing_fetch_windows(
+        cls,
+        cached: dict[str, float],
+        start_date: date,
+        end_date: date,
+        tolerance_days: int,
+    ) -> list[tuple[date, date]]:
+        bounds = cls._cached_bounds(cached)
+        if bounds is None:
+            return [(start_date, end_date)]
+
+        min_cached, max_cached = bounds
+        windows: list[tuple[date, date]] = []
+
+        if min_cached > start_date:
+            window_end = min(min_cached - timedelta(days=1), end_date)
+            windows.append((start_date, window_end))
+
+        if max_cached < end_date - timedelta(days=tolerance_days):
+            window_start = max(max_cached + timedelta(days=1), start_date)
+            windows.append((window_start, end_date))
+
+        return [
+            (window_start, window_end)
+            for window_start, window_end in windows
+            if window_start <= window_end
+        ]
+
     @staticmethod
+    def _cached_bounds(series: dict[str, float]) -> tuple[date, date] | None:
+        if not series:
+            return None
+
+        min_cached: date | None = None
+        max_cached: date | None = None
+        for iso_date in series:
+            try:
+                parsed_date = date.fromisoformat(iso_date)
+            except (TypeError, ValueError):
+                continue
+
+            if min_cached is None or parsed_date < min_cached:
+                min_cached = parsed_date
+            if max_cached is None or parsed_date > max_cached:
+                max_cached = parsed_date
+
+        if min_cached is None or max_cached is None:
+            return None
+
+        return min_cached, max_cached
+
+    @classmethod
     def _covers_window(
+        cls,
         series: dict[str, float],
         start_date: date,
         end_date: date,
         tolerance_days: int,
     ) -> bool:
-        if not series:
+        bounds = cls._cached_bounds(series)
+        if bounds is None:
             return False
 
-        cached_dates: list[date] = []
-        for iso_date in series:
-            try:
-                cached_dates.append(date.fromisoformat(iso_date))
-            except (TypeError, ValueError):
-                continue
-
-        if not cached_dates:
-            return False
-
-        min_cached = min(cached_dates)
-        max_cached = max(cached_dates)
+        min_cached, max_cached = bounds
         return (
             min_cached <= start_date
             and max_cached >= (end_date - timedelta(days=tolerance_days))

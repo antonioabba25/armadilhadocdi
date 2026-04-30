@@ -62,7 +62,7 @@ class JsonFileCache:
 
     @contextmanager
     def _locked(self, name: str) -> Iterator[None]:
-        lock_path = self.root_dir / f"{name}.lock"
+        lock_path = Path(f"{self._path_for(name)}.lock")
         thread_lock = self._thread_lock_for(lock_path)
 
         with thread_lock:
@@ -85,7 +85,7 @@ class JsonFileCache:
             return cls._locks_by_path[resolved]
 
     def _load_unlocked(self, name: str) -> dict[str, float]:
-        path = self.root_dir / name
+        path = self._path_for(name)
         if not path.exists():
             return {}
 
@@ -106,7 +106,7 @@ class JsonFileCache:
         return normalized
 
     def _save_unlocked(self, name: str, data: dict[str, float]) -> None:
-        path = self.root_dir / name
+        path = self._path_for(name)
         serialized = {key: data[key] for key in sorted(data)}
         payload = json.dumps(serialized, ensure_ascii=True, indent=2)
 
@@ -128,6 +128,19 @@ class JsonFileCache:
         finally:
             if temp_path.exists():
                 temp_path.unlink()
+
+    def _path_for(self, name: str) -> Path:
+        relative_path = Path(name)
+        if (
+            not name
+            or relative_path.is_absolute()
+            or relative_path.name != name
+            or relative_path.name in {".", ".."}
+        ):
+            raise ValueError(
+                "O nome do arquivo de cache deve ser simples e relativo."
+            )
+        return self.root_dir / relative_path
 
 
 class PostgresTimeSeriesCache:

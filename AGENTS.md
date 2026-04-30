@@ -18,6 +18,7 @@ O MVP ativo é uma aplicação Streamlit com núcleo em Python puro:
 - dados: USD/BRL pela PTAX de venda via API Olinda/BCB;
 - saída: resumo analítico e gráfico comparativo;
 - cache configurável: JSON local em `cache/` para desenvolvimento, ou Postgres/Supabase para publicação;
+- sincronização sob demanda busca apenas bordas ausentes quando o cache já cobre parte da janela;
 - cache local com lock por arquivo e escrita atômica; cache Postgres/Supabase com `UPSERT` transacional por série e data;
 - sincronização operacional: `scripts/sync_market_data.py` para preaquecer/atualizar o cache fora da requisição do usuário.
 
