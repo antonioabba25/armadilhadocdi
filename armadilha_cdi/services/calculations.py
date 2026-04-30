@@ -3,12 +3,22 @@ from __future__ import annotations
 from bisect import bisect_right
 from datetime import date
 
-from armadilha_cdi.config import MAX_MARKET_DATE_FALLBACK_DAYS, MAX_USD_FALLBACK_DAYS
+from armadilha_cdi.config import (
+    EARLIEST_SUPPORTED_DATE,
+    MAX_MARKET_DATE_FALLBACK_DAYS,
+    MAX_USD_FALLBACK_DAYS,
+)
 from armadilha_cdi.exceptions import DataUnavailableError, DomainValidationError
 from armadilha_cdi.models import CalculationResult, QuoteLookup
 
 
 def validate_inputs(start_date: date, end_date: date, initial_brl: float) -> None:
+    if start_date < EARLIEST_SUPPORTED_DATE:
+        raise DomainValidationError(
+            "A data inicial deve ser em ou posterior a "
+            f"{EARLIEST_SUPPORTED_DATE.strftime('%d/%m/%Y')}, "
+            "quando o real brasileiro entrou em circulacao."
+        )
     if end_date <= start_date:
         raise DomainValidationError("A data final deve ser maior que a data inicial.")
     if initial_brl <= 0:
@@ -22,13 +32,17 @@ class QuoteResolver:
         self,
         usd_rates: dict[str, float],
         max_days_back: int = MAX_USD_FALLBACK_DAYS,
+        min_date: date | None = None,
     ) -> None:
         self.max_days_back = max_days_back
+        self.min_date = min_date
         self._values_by_date: dict[date, float] = {}
 
         for iso_date, value in usd_rates.items():
             try:
                 parsed_date = date.fromisoformat(iso_date)
+                if self.min_date is not None and parsed_date < self.min_date:
+                    continue
                 self._values_by_date[parsed_date] = float(value)
             except (TypeError, ValueError):
                 continue
@@ -59,14 +73,19 @@ class MarketDateResolver:
         series: dict[str, float],
         label: str,
         max_days_back: int = MAX_MARKET_DATE_FALLBACK_DAYS,
+        min_date: date | None = None,
     ) -> None:
         self.label = label
         self.max_days_back = max_days_back
+        self.min_date = min_date
         self._ordered_dates: list[date] = []
 
         for iso_date in series:
             try:
-                self._ordered_dates.append(date.fromisoformat(str(iso_date)))
+                parsed_date = date.fromisoformat(str(iso_date))
+                if self.min_date is not None and parsed_date < self.min_date:
+                    continue
+                self._ordered_dates.append(parsed_date)
             except (TypeError, ValueError):
                 continue
 
@@ -97,7 +116,11 @@ def resolve_cdi_period(
     start_date: date,
     end_date: date,
 ) -> tuple[date, date]:
-    resolver = MarketDateResolver(series=cdi_rates, label="CDI")
+    resolver = MarketDateResolver(
+        series=cdi_rates,
+        label="CDI",
+        min_date=EARLIEST_SUPPORTED_DATE,
+    )
     effective_start_date = resolver.lookup(start_date)
     effective_end_date = resolver.lookup(end_date)
 
@@ -157,7 +180,7 @@ def calculate_result(
         start_date=effective_start_date,
         end_date=effective_end_date,
     )
-    quote_resolver = QuoteResolver(usd_rates=usd_rates)
+    quote_resolver = QuoteResolver(usd_rates=usd_rates, min_date=EARLIEST_SUPPORTED_DATE)
     initial_quote = quote_resolver.lookup(effective_start_date)
     final_quote = quote_resolver.lookup(effective_end_date)
 

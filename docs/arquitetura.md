@@ -11,10 +11,12 @@ A base ativa nao depende mais de scripts exploratorios. A memoria tecnica da fas
 ### Interface
 
 - `app.py`
+- `armadilha_cdi/frontpage_texts.py`
 
 Responsabilidades:
 
 - receber `data inicial`, `data final` e `valor inicial`;
+- centralizar os textos exibidos na frontpage;
 - chamar o provider de dados;
 - acionar a regra de calculo;
 - renderizar cards, tabela-resumo e grafico;
@@ -28,7 +30,7 @@ Responsabilidades:
 
 - consultar CDI no Banco Central;
 - consultar PTAX USD/BRL no Banco Central;
-- sincronizar dados com o cache local;
+- sincronizar dados com o cache configurado;
 - devolver um `MarketDataBundle` pronto para a camada de calculo.
 
 ### Cache
@@ -37,14 +39,17 @@ Responsabilidades:
 
 Responsabilidades:
 
+- definir o contrato comum de persistencia de series;
 - persistir series em arquivos JSON;
+- persistir series em Postgres/Supabase para publicacao;
 - carregar historico ja existente;
 - fazer merge incremental com novos dados;
 - proteger load/merge/save com lock por arquivo;
 - gravar por substituicao atomica para evitar JSON parcial;
+- gravar em Postgres com `UPSERT` por serie e data;
 - evitar recaptura completa do historico a cada execucao.
 
-O cache local e adequado para o MVP e para uma publicacao simples em processo unico. Ele nao deve ser tratado como banco definitivo em producao com multiplas instancias; nesse caso, a camada deve evoluir para banco, storage compartilhado ou outro mecanismo transacional.
+O cache local e adequado para desenvolvimento e execucao local. Para publicacao, o backend preferencial e Supabase/Postgres, configurado por ambiente com `MARKET_DATA_CACHE_BACKEND=supabase` e `SUPABASE_DATABASE_URL`.
 
 ### Sincronizacao operacional
 
@@ -63,6 +68,7 @@ Responsabilidades:
 Responsabilidades:
 
 - validar entradas de dominio;
+- impedir periodos iniciados antes da entrada em circulacao do real brasileiro, em 01/07/1994;
 - resolver datas solicitadas para dias uteis oficiais;
 - aplicar a janela oficial do CDI sobre o periodo efetivo;
 - resolver cotacoes com fallback;
@@ -93,16 +99,29 @@ Responsabilidades:
 
 1. O usuario informa data inicial, data final e valor inicial em BRL.
 2. A interface pede ao provider os dados de mercado necessarios para a janela selecionada.
-3. O provider consulta cache local e completa a janela no Banco Central quando necessario.
+3. O provider consulta o cache configurado e completa a janela no Banco Central quando necessario. Para CDI, janelas longas sao fatiadas em requisicoes menores ao SGS/BCB, com breve pausa entre chamadas.
 4. A camada de calculo resolve o periodo efetivo de mercado, acumula o CDI e resolve as cotacoes USD/BRL com fallback.
 5. A camada de grafico prepara a serie comparativa em dias uteis oficiais.
 6. A interface apresenta o resumo analitico e o grafico.
 
 Em operacao publicada, o fluxo preferencial e rodar `scripts/sync_market_data.py` de forma manual ou agendada antes do uso. Assim, o caminho interativo tende a ler dados ja sincronizados e so usa a sincronizacao sob demanda como fallback.
 
+Na publicacao com Supabase, a tabela padrao e `market_rates`, com chave primaria `(series, ref_date)`. O app cria essa tabela automaticamente ao iniciar o backend Postgres, mas a mesma definicao tambem pode ser criada manualmente em migracao SQL:
+
+```sql
+create table if not exists market_rates (
+  series text not null,
+  ref_date date not null,
+  value numeric not null,
+  updated_at timestamptz not null default now(),
+  primary key (series, ref_date)
+);
+```
+
 ## Regras centrais preservadas na arquitetura
 
 - CDI acumulado com `data_inicial_efetiva <= data < data_final_efetiva`
+- data inicial em 01/07/1994 ou depois, sem fallback para dados anteriores ao real
 - datas sem dado oficial resolvidas para o ultimo dia util disponivel
 - cotacao USD/BRL com fallback de ate 15 dias para tras
 - metrica principal: ganho real em USD
@@ -113,7 +132,7 @@ Em operacao publicada, o fluxo preferencial e rodar `scripts/sync_market_data.py
 - facilita testes unitarios sem depender do Streamlit;
 - reduz o risco de misturar interface com regra financeira;
 - permite adicionar uma API HTTP no futuro sem reescrever o nucleo do calculo;
-- permite trocar o cache local por banco sem mexer na UI ou na regra financeira;
+- permite alternar entre cache local e Supabase sem mexer na UI ou na regra financeira;
 - mantem o projeto orientado a uma estrutura de producao simples, em vez de depender de material exploratorio.
 
 ## Direcao futura
@@ -123,4 +142,5 @@ Esta estrutura foi pensada para suportar evolucoes sem quebrar o MVP:
 - entrada de novas series, como IPCA;
 - eventual comparacao com inflacao americana;
 - exposicao por API;
-- troca do mecanismo de cache local por banco ou camada de memoizacao mais robusta.
+- rotina agendada de sincronizacao diaria do backend Supabase;
+- camada adicional de cache de leitura em memoria sobre o backend persistente, se houver necessidade.

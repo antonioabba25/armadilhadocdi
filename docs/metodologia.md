@@ -19,6 +19,8 @@ O calculo parte de tres entradas obrigatorias:
 - `data final`
 - `valor inicial investido` em BRL
 
+Como o real brasileiro entrou em circulacao em 01/07/1994, a `data inicial` deve ser 01/07/1994 ou posterior. Dados de CDI ou USD/BRL anteriores a essa data nao sao usados como fallback do periodo inicial.
+
 ## Regra temporal consolidada
 
 A regra temporal consolidada para o app e:
@@ -68,11 +70,15 @@ Essa decisao evita duas falhas comuns:
 
 ## Cache e sincronizacao
 
-O cache local nao substitui a fonte oficial. Ele e uma camada de sincronizacao: o app consulta primeiro os JSONs locais, busca no Banco Central apenas quando a janela ainda nao esta coberta e grava os novos pontos para reutilizacao.
+O cache nao substitui a fonte oficial. Ele e uma camada de sincronizacao: o app consulta primeiro os dados persistidos, busca no Banco Central apenas quando a janela ainda nao esta coberta e grava os novos pontos para reutilizacao.
+
+Na serie diaria do CDI, a busca no SGS/BCB e dividida em janelas menores com uma pequena pausa entre requisicoes. Esse fatiamento e apenas operacional: ele contorna limites da API em periodos longos e depois une os pontos pela data oficial, sem mudar a formula de acumulacao.
 
 Para publicacao, o caminho preferencial e preaquecer ou atualizar esse cache por `scripts/sync_market_data.py`, fora da interacao do usuario. O app ainda consegue sincronizar sob demanda quando faltar uma janela, mas essa deve ser uma contingencia, nao a rotina principal de operacao.
 
-O cache JSON usa lock por arquivo e escrita atomica para reduzir risco de corrupcao em acessos concorrentes. Essa protecao melhora o MVP em Streamlit, mas nao transforma o arquivo local em banco compartilhado para multiplas instancias.
+Em desenvolvimento, o backend padrao continua sendo JSON local em `cache/`. Ele usa lock por arquivo e escrita atomica para reduzir risco de corrupcao em acessos concorrentes.
+
+Em publicacao, o backend recomendado e Supabase/Postgres. Nesse modo, cada ponto de mercado e gravado por serie e data, com `UPSERT` transacional, evitando sobrescrever um arquivo JSON inteiro quando mais de uma sessao tenta sincronizar dados proximos no tempo.
 
 ## Etapa 3: conversao do capital para dolar
 

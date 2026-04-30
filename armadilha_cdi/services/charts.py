@@ -4,6 +4,7 @@ from datetime import date
 
 import pandas as pd
 
+from armadilha_cdi import frontpage_texts as copy
 from armadilha_cdi.services.calculations import (
     QuoteResolver,
     resolve_cdi_period,
@@ -35,7 +36,7 @@ def build_chart_dataframe(
         start_date=start_date,
         end_date=end_date,
     )
-    quote_resolver = QuoteResolver(usd_rates=usd_rates)
+    quote_resolver = QuoteResolver(usd_rates=usd_rates, min_date=effective_start_date)
     initial_quote = quote_resolver.lookup(effective_start_date)
     timeline = [
         current_date
@@ -53,12 +54,12 @@ def build_chart_dataframe(
 
         rows.append(
             {
-                "data": current_date,
-                "CDI Acumulado (%)": cdi_variation * 100,
-                "USD Acumulado (%)": usd_variation * 100,
-                "Ganho Real em USD (%)": gain_real_usd * 100,
-                "Capital Corrigido (BRL)": initial_brl * cdi_factor,
-                "Cotacao USD/BRL": effective_quote.value,
+                copy.CHART_DATE: current_date,
+                copy.CHART_CDI_ACCUMULATED: cdi_variation * 100,
+                copy.CHART_USD_ACCUMULATED: usd_variation * 100,
+                copy.CHART_REAL_USD_GAIN: gain_real_usd * 100,
+                copy.CHART_ADJUSTED_CAPITAL: initial_brl * cdi_factor,
+                copy.CHART_USD_BRL_QUOTE: effective_quote.value,
             }
         )
 

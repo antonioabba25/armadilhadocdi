@@ -64,7 +64,7 @@ Analisar periodo
 Microcopy abaixo ou acima do formulario:
 
 ```text
-Informe datas a partir de 06/03/1986. Datas sem dado oficial usam a ultima data util disponivel.
+Informe datas a partir de 01/07/1994. Datas sem dado oficial usam a ultima data util disponivel.
 ```
 
 ## Estado inicial

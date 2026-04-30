@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from time import sleep
+from typing import Callable
 
 import requests
 
 from armadilha_cdi.config import (
     BCB_HEADERS,
+    CDI_QUERY_CHUNK_DAYS,
+    CDI_QUERY_CHUNK_DELAY_SECONDS,
     CDI_SERIES_URL,
     DATE_DISPLAY_FORMAT,
     DATE_STORAGE_FORMAT,
+    EARLIEST_SUPPORTED_DATE,
     MAX_MARKET_DATE_FALLBACK_DAYS,
     MAX_USD_FALLBACK_DAYS,
     PTAX_QUERY_FORMAT,
@@ -17,7 +22,7 @@ from armadilha_cdi.config import (
 )
 from armadilha_cdi.exceptions import MarketDataError
 from armadilha_cdi.models import MarketDataBundle
-from armadilha_cdi.services.cache import JsonFileCache
+from armadilha_cdi.services.cache import TimeSeriesCache
 
 
 class BCBMarketDataProvider:
@@ -25,23 +30,41 @@ class BCBMarketDataProvider:
 
     def __init__(
         self,
-        cache_repository: JsonFileCache,
+        cache_repository: TimeSeriesCache,
         timeout_seconds: int = REQUEST_TIMEOUT_SECONDS,
+        cdi_chunk_days: int = CDI_QUERY_CHUNK_DAYS,
+        cdi_chunk_delay_seconds: float = CDI_QUERY_CHUNK_DELAY_SECONDS,
+        sleep_func: Callable[[float], None] = sleep,
     ) -> None:
         self.cache_repository = cache_repository
         self.timeout_seconds = timeout_seconds
+        self.cdi_chunk_days = max(1, cdi_chunk_days)
+        self.cdi_chunk_delay_seconds = max(0.0, cdi_chunk_delay_seconds)
+        self.sleep_func = sleep_func
 
     def get_market_data(self, start_date: date, end_date: date) -> MarketDataBundle:
         """Return cached + synchronized market data for the requested window."""
+        if start_date < EARLIEST_SUPPORTED_DATE:
+            raise MarketDataError(
+                "A data inicial deve ser em ou posterior a "
+                f"{EARLIEST_SUPPORTED_DATE.strftime('%d/%m/%Y')}, "
+                "quando o real brasileiro entrou em circulacao."
+            )
         if end_date <= start_date:
             raise MarketDataError("A data final deve ser maior que a data inicial.")
 
         cdi_rates = self._ensure_cdi_data(
-            start_date=start_date - timedelta(days=MAX_MARKET_DATE_FALLBACK_DAYS),
+            start_date=max(
+                EARLIEST_SUPPORTED_DATE,
+                start_date - timedelta(days=MAX_MARKET_DATE_FALLBACK_DAYS),
+            ),
             end_date=end_date,
         )
         usd_rates = self._ensure_usd_data(
-            start_date=start_date - timedelta(days=MAX_USD_FALLBACK_DAYS),
+            start_date=max(
+                EARLIEST_SUPPORTED_DATE,
+                start_date - timedelta(days=MAX_USD_FALLBACK_DAYS),
+            ),
             end_date=end_date,
         )
         return MarketDataBundle(cdi_rates=cdi_rates, usd_rates=usd_rates)
@@ -101,6 +124,40 @@ class BCBMarketDataProvider:
         )
 
     def _fetch_cdi_rates(self, start_date: date, end_date: date) -> dict[str, float]:
+        chunks = list(self._iter_date_chunks(start_date, end_date, self.cdi_chunk_days))
+        parsed: dict[str, float] = {}
+
+        for index, (chunk_start, chunk_end) in enumerate(chunks):
+            parsed.update(
+                self._fetch_cdi_rates_chunk(start_date=chunk_start, end_date=chunk_end)
+            )
+            if index < len(chunks) - 1 and self.cdi_chunk_delay_seconds > 0:
+                self.sleep_func(self.cdi_chunk_delay_seconds)
+
+        return parsed
+
+    @staticmethod
+    def _iter_date_chunks(
+        start_date: date,
+        end_date: date,
+        chunk_days: int,
+    ) -> list[tuple[date, date]]:
+        if end_date < start_date:
+            return []
+
+        chunks: list[tuple[date, date]] = []
+        chunk_start = start_date
+        safe_chunk_days = max(1, chunk_days)
+        while chunk_start <= end_date:
+            chunk_end = min(
+                chunk_start + timedelta(days=safe_chunk_days - 1),
+                end_date,
+            )
+            chunks.append((chunk_start, chunk_end))
+            chunk_start = chunk_end + timedelta(days=1)
+        return chunks
+
+    def _fetch_cdi_rates_chunk(self, start_date: date, end_date: date) -> dict[str, float]:
         params = {
             "formato": "json",
             "dataInicial": start_date.strftime(DATE_DISPLAY_FORMAT),
@@ -114,12 +171,31 @@ class BCBMarketDataProvider:
                 headers=BCB_HEADERS,
                 timeout=self.timeout_seconds,
             )
-            response.raise_for_status()
+            if response.status_code >= 400:
+                detail = self._response_error_detail(response)
+                if detail:
+                    raise MarketDataError(
+                        f"Falha ao consultar CDI no Banco Central: {detail}"
+                    )
+                response.raise_for_status()
             payload = response.json()
         except requests.RequestException as exc:
-            raise MarketDataError(f"Falha ao consultar CDI no Banco Central: {exc}") from exc
+            detail = self._response_error_detail(getattr(exc, "response", None))
+            message = detail or str(exc)
+            raise MarketDataError(f"Falha ao consultar CDI no Banco Central: {message}") from exc
         except ValueError as exc:
-            raise MarketDataError("Resposta invalida ao consultar o CDI.") from exc
+            detail = self._response_error_detail(response)
+            message = f"Resposta invalida ao consultar o CDI: {detail}" if detail else (
+                "Resposta invalida ao consultar o CDI."
+            )
+            raise MarketDataError(message) from exc
+
+        if not isinstance(payload, list):
+            detail = self._payload_error_detail(payload)
+            message = f"Resposta invalida ao consultar o CDI: {detail}" if detail else (
+                "Resposta invalida ao consultar o CDI."
+            )
+            raise MarketDataError(message)
 
         parsed: dict[str, float] = {}
         for item in payload:
@@ -133,6 +209,34 @@ class BCBMarketDataProvider:
             except (KeyError, TypeError, ValueError):
                 continue
         return parsed
+
+    @classmethod
+    def _response_error_detail(cls, response: requests.Response | None) -> str:
+        if response is None:
+            return ""
+
+        try:
+            payload = response.json()
+        except ValueError:
+            text = response.text.strip()
+            if not text:
+                return ""
+            if "Requisi" in text and "inv" in text:
+                return "BCB retornou uma pagina HTML de requisicao invalida."
+            return text[:200]
+
+        return cls._payload_error_detail(payload)
+
+    @staticmethod
+    def _payload_error_detail(payload: object) -> str:
+        if not isinstance(payload, dict):
+            return ""
+
+        for key in ("message", "error"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return ""
 
     def _fetch_usd_rates(self, start_date: date, end_date: date) -> dict[str, float]:
         url = PTAX_URL_TEMPLATE.format(

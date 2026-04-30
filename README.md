@@ -8,6 +8,8 @@ A pergunta central do projeto e:
 
 O app nao e uma calculadora generica de renda fixa. Ele mostra se o ganho em BRL foi suficiente para preservar ou aumentar o equivalente em USD.
 
+Como o real brasileiro entrou em circulacao em 01/07/1994, a aplicacao aceita apenas periodos iniciados nessa data ou depois dela.
+
 ## Estado atual
 
 O MVP atual cobre:
@@ -15,8 +17,8 @@ O MVP atual cobre:
 - entrada de `data inicial`, `data final` e `valor inicial investido` em BRL;
 - busca de CDI diario pela serie 12 do SGS/BCB;
 - busca de USD/BRL pela PTAX de venda via API Olinda/BCB;
-- cache local em JSON como camada de sincronizacao com a fonte oficial;
-- escrita atomica e lock por arquivo no cache local para reduzir risco de corrupcao em acessos concorrentes;
+- cache configuravel: JSON local para desenvolvimento ou Postgres/Supabase para publicacao;
+- escrita atomica e lock por arquivo no cache local, e `UPSERT` transacional no Postgres/Supabase;
 - script de sincronizacao manual/agendavel para preaquecer o cache sem depender da primeira requisicao de usuario;
 - calculo analitico do capital corrigido pelo CDI;
 - conversao do capital inicial e final para USD;
@@ -121,7 +123,7 @@ Camadas principais:
 
 - `app.py`: interface Streamlit, formulario, resumo, grafico e mensagens de erro;
 - `data_providers.py`: integracao com Banco Central e sincronizacao do cache;
-- `cache.py`: leitura, normalizacao, merge, lock e escrita atomica dos JSONs locais;
+- `cache.py`: contrato de cache, backend JSON local e backend Postgres/Supabase;
 - `calculations.py`: validacao, acumulacao de CDI e resolucao de cotacoes;
 - `charts.py`: preparacao das series comparativas do grafico;
 - `models.py`: dataclasses compartilhadas entre camadas;
@@ -149,17 +151,29 @@ Testes:
 python3 -m unittest discover -s tests -v
 ```
 
-Sincronizar/preaquecer o cache:
+Sincronizar/preaquecer o cache local:
 
 ```bash
 python3 scripts/sync_market_data.py --start 2020-01-01
 ```
 
-## Cache local
+Sincronizar/preaquecer o cache no Supabase:
 
-O cache fica em `cache/` e e ignorado pelo Git. Ele funciona como camada de sincronizacao com o Banco Central: o app consulta primeiro os arquivos locais, completa as janelas ausentes na fonte oficial e grava o merge para consultas futuras. Ele pode ser apagado quando necessario; o app recria os arquivos ao consultar o Banco Central novamente.
+```bash
+MARKET_DATA_CACHE_BACKEND=supabase \
+SUPABASE_DATABASE_URL="postgresql://..." \
+python3 scripts/sync_market_data.py --start 2020-01-01
+```
 
-As escritas sao feitas por arquivo temporario seguido de substituicao atomica, com lock por arquivo durante load/merge/save. Isso torna o cache local mais seguro para o modelo do Streamlit, no qual mais de uma sessao pode acionar consultas proximas no tempo. Para publicacao com maior trafego ou multiplas instancias, a direcao recomendada continua sendo migrar essa camada para banco ou storage persistente transacional.
+## Cache e Supabase
+
+O cache funciona como camada de sincronizacao com o Banco Central: o app consulta primeiro os dados persistidos, completa as janelas ausentes na fonte oficial e grava o merge para consultas futuras.
+
+As consultas de CDI ao SGS/BCB sao fatiadas internamente em janelas menores, com uma pequena pausa entre requisicoes. Isso contorna limites de janela em series diarias e reduz falhas em periodos longos sem alterar a regra de calculo.
+
+Por padrao, o backend e JSON local em `cache/`, ignorado pelo Git. Ele e adequado para desenvolvimento e execucao local. Pode ser apagado quando necessario; o app recria os arquivos ao consultar o Banco Central novamente.
+
+No backend local, as escritas sao feitas por arquivo temporario seguido de substituicao atomica, com lock por arquivo durante load/merge/save. Isso torna o cache local mais seguro para o modelo do Streamlit, mas ele continua sendo uma opcao de desenvolvimento. Para publicacao, use o backend Supabase/Postgres.
 
 Arquivos esperados em runtime:
 
@@ -167,6 +181,30 @@ Arquivos esperados em runtime:
 - `cache/usd.json`.
 
 Arquivos `*.lock` ou temporarios dentro de `cache/` podem aparecer durante execucao e nao devem ser versionados.
+
+Para publicacao, use o backend Supabase/Postgres:
+
+```toml
+# .streamlit/secrets.toml ou secrets da plataforma
+MARKET_DATA_CACHE_BACKEND = "supabase"
+SUPABASE_DATABASE_URL = "postgresql://..."
+# opcional
+SUPABASE_CACHE_TABLE = "market_rates"
+```
+
+O app cria automaticamente a tabela se ela ainda nao existir:
+
+```sql
+create table if not exists market_rates (
+  series text not null,
+  ref_date date not null,
+  value numeric not null,
+  updated_at timestamptz not null default now(),
+  primary key (series, ref_date)
+);
+```
+
+Use a connection string Postgres do Supabase no servidor. Para ambientes sem IPv6 ou com muitas conexoes temporarias, prefira a string do pooler indicada pelo Supabase. O valor de `SUPABASE_DATABASE_URL` e segredo e nao deve ser versionado.
 
 ## Fontes de dados
 
@@ -178,7 +216,7 @@ Veja links e observacoes em [docs/referencias.md](docs/referencias.md).
 ## Limitacoes
 
 - A disponibilidade depende dos servicos publicos do Banco Central.
-- A menor data selecionavel no app e 06/03/1986, inicio disponivel da serie CDI 12 usada pelo MVP.
+- A menor data selecionavel no app e 01/07/1994, data de entrada em circulacao do real brasileiro.
 - A PTAX e uma referencia oficial, nao a taxa efetiva de uma operacao individual.
 - Calculos, graficos e tabelas consideram apenas dias uteis presentes nas series oficiais.
 - O grafico atual nao inclui IPCA.
@@ -189,4 +227,5 @@ Veja links e observacoes em [docs/referencias.md](docs/referencias.md).
 - adicionar endpoint HTTP para consumo externo;
 - incluir IPCA como serie opcional;
 - avaliar inflacao americana como camada adicional de leitura em USD;
-- evoluir o cache para banco, storage compartilhado ou memoizacao gerenciada em ambiente de producao.
+- adicionar rotina agendada de sincronizacao diaria do cache Supabase;
+- avaliar cache de leitura em memoria no Streamlit sobre o backend persistente.

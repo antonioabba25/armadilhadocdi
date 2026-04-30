@@ -14,9 +14,11 @@ O MVP ativo é uma aplicação Streamlit com núcleo em Python puro:
 
 - entrada: `data inicial`, `data final`, `valor inicial investido` em BRL;
 - dados: CDI diário do SGS/BCB, série `12`;
+- consultas longas de CDI ao SGS/BCB são fatiadas em janelas menores com pequeno delay entre requisições;
 - dados: USD/BRL pela PTAX de venda via API Olinda/BCB;
 - saída: resumo analítico e gráfico comparativo;
-- cache local: JSON em `cache/`, ignorado pelo Git, usado como camada de sincronização com a fonte oficial, com lock por arquivo e escrita atômica;
+- cache configurável: JSON local em `cache/` para desenvolvimento, ou Postgres/Supabase para publicação;
+- cache local com lock por arquivo e escrita atômica; cache Postgres/Supabase com `UPSERT` transacional por série e data;
 - sincronização operacional: `scripts/sync_market_data.py` para preaquecer/atualizar o cache fora da requisição do usuário.
 
 Os scripts exploratórios antigos foram removidos da base ativa. As decisões úteis deles foram consolidadas em `README.md`, `docs/metodologia.md`, `docs/arquitetura.md` e neste arquivo. Não recrie notebook/script exploratório como dependência do MVP; implemente mudanças nos módulos de produção e cubra com testes.
@@ -43,7 +45,7 @@ Responsabilidades:
 
 - `app.py`: UI Streamlit, formulário, renderização de métricas, gráfico e mensagens.
 - `armadilha_cdi/services/data_providers.py`: consultas ao Banco Central e sincronização com cache.
-- `armadilha_cdi/services/cache.py`: leitura, normalização, merge, lock e escrita atômica do cache JSON.
+- `armadilha_cdi/services/cache.py`: contrato de cache, backend JSON local, backend Postgres/Supabase, normalização e merge.
 - `armadilha_cdi/services/calculations.py`: regra financeira principal e fallback de cotação.
 - `armadilha_cdi/services/charts.py`: séries derivadas para visualização.
 - `armadilha_cdi/models.py`: dataclasses de troca entre camadas.
@@ -53,6 +55,7 @@ Responsabilidades:
 ## Regras de negócio que não devem mudar sem decisão explícita
 
 - Datas sem dado oficial são resolvidas para a última data útil disponível.
+- A data inicial deve ser 01/07/1994 ou posterior; dados anteriores à entrada em circulação do real brasileiro não devem ser usados como fallback inicial.
 - A janela do CDI é `data_inicial_efetiva <= data < data_final_efetiva`.
 - O CDI é acumulado diariamente com `fator *= 1 + taxa_diaria / 100`.
 - USD/BRL usa PTAX de venda.
@@ -112,6 +115,14 @@ Preaquecer/sincronizar cache:
 python3 scripts/sync_market_data.py --start 2020-01-01
 ```
 
+Preaquecer/sincronizar cache Supabase:
+
+```bash
+MARKET_DATA_CACHE_BACKEND=supabase \
+SUPABASE_DATABASE_URL="postgresql://..." \
+python3 scripts/sync_market_data.py --start 2020-01-01
+```
+
 Checar arquivos rastreados e sujeira local:
 
 ```bash
@@ -124,6 +135,7 @@ git ls-files
 - Prefira mudar `armadilha_cdi/services/calculations.py` quando a regra financeira mudar.
 - Prefira mudar `armadilha_cdi/services/data_providers.py` quando a origem ou sincronização de dados mudar.
 - Prefira mudar `armadilha_cdi/services/cache.py` quando a persistência local, lock ou escrita do cache mudar.
+- Preserve o backend JSON como padrão local e use `MARKET_DATA_CACHE_BACKEND=supabase` para publicação com Supabase/Postgres.
 - Prefira mudar `armadilha_cdi/services/charts.py` quando a visualização precisar de novas séries derivadas.
 - Prefira mudar `scripts/sync_market_data.py` quando o fluxo operacional de preaquecer/atualizar cache mudar.
 - Mantenha `app.py` focado em interface; evite colocar regra financeira nele.
@@ -138,6 +150,6 @@ git ls-files
 - IPCA como série opcional no gráfico.
 - Inflação americana como camada adicional de poder de compra em USD.
 - Endpoint HTTP fora do Streamlit.
-- Cache em banco, storage compartilhado ou serviço gerenciado para produção com maior tráfego ou múltiplas instâncias.
+- Cache em storage de objetos ou serviço gerenciado diferente do Supabase/Postgres.
 
 Esses temas podem ser implementados depois, mas não devem complicar o fluxo mínimo `CDI + USD/BRL` sem necessidade de produto.

@@ -100,6 +100,45 @@ class CalculationTests(unittest.TestCase):
                 usd_rates=self.usd_rates,
             )
 
+    def test_start_date_before_real_circulation_is_rejected(self) -> None:
+        with self.assertRaisesRegex(DomainValidationError, "01/07/1994"):
+            calculate_result(
+                start_date=date(1994, 6, 30),
+                end_date=date(1994, 7, 4),
+                initial_brl=1000.0,
+                cdi_rates={
+                    "1994-06-30": 0.10,
+                    "1994-07-01": 0.20,
+                    "1994-07-04": 0.30,
+                },
+                usd_rates={
+                    "1994-06-30": 1.00,
+                    "1994-07-01": 1.00,
+                    "1994-07-04": 1.00,
+                },
+            )
+
+    def test_real_circulation_start_date_does_not_fallback_to_previous_currency(self) -> None:
+        result = calculate_result(
+            start_date=date(1994, 7, 1),
+            end_date=date(1994, 7, 4),
+            initial_brl=1000.0,
+            cdi_rates={
+                "1994-06-30": 99.00,
+                "1994-07-01": 0.20,
+                "1994-07-04": 0.30,
+            },
+            usd_rates={
+                "1994-06-30": 99.00,
+                "1994-07-01": 1.00,
+                "1994-07-04": 1.00,
+            },
+        )
+
+        self.assertEqual(result.effective_start_date, date(1994, 7, 1))
+        self.assertEqual(result.initial_fx_date, date(1994, 7, 1))
+        self.assertAlmostEqual(result.cdi_factor, 1 + 0.20 / 100, places=10)
+
     def test_missing_quote_raises_data_unavailable(self) -> None:
         with self.assertRaises(DataUnavailableError):
             lookup_quote_with_fallback(
