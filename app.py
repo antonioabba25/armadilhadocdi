@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import date, timedelta
 from html import escape
 
@@ -19,6 +20,9 @@ from armadilha_cdi.services.calculations import (
 )
 from armadilha_cdi.services.charts import build_chart_dataframe
 from armadilha_cdi.services.data_providers import BCBMarketDataProvider
+
+
+logger = logging.getLogger(__name__)
 
 
 @st.cache_resource
@@ -1065,8 +1069,9 @@ def main() -> None:
     except (DomainValidationError, MarketDataError, CacheConfigurationError) as exc:
         render_status_message(str(exc), "negative")
         render_footer()
-    except Exception as exc:  # pragma: no cover - safeguard for UI
-        render_status_message(copy.UNEXPECTED_ERROR_TEMPLATE.format(error=exc), "negative")
+    except Exception:  # pragma: no cover - safeguard for UI
+        logger.exception("Erro inesperado ao renderizar a aplicacao.")
+        render_status_message(copy.UNEXPECTED_ERROR_MESSAGE, "negative")
         render_footer()
 
 
