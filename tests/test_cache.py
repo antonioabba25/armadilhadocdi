@@ -4,7 +4,9 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
+import sys
 import tempfile
+import types
 import unittest
 from unittest import mock
 
@@ -109,6 +111,23 @@ class PostgresTimeSeriesCacheTests(unittest.TestCase):
                 }
             ),
             {"2024-01-01": 1.5},
+        )
+
+    def test_connect_uses_supabase_pooler_safe_options(self) -> None:
+        fake_psycopg = types.SimpleNamespace(connect=mock.Mock())
+
+        with mock.patch.dict(sys.modules, {"psycopg": fake_psycopg}):
+            cache = PostgresTimeSeriesCache(
+                database_url="postgresql://example",
+                ensure_schema=False,
+            )
+            cache._connect()
+
+        fake_psycopg.connect.assert_called_once_with(
+            "postgresql://example",
+            application_name="armadilha_cdi",
+            connect_timeout=10,
+            prepare_threshold=None,
         )
 
 

@@ -121,6 +121,10 @@ create table if not exists market_rates (
 );
 ```
 
+A migracao versionada em `supabase/migrations/20260501000000_create_market_rates.sql` aplica a mesma estrutura em `public.market_rates`, habilita RLS e revoga acesso direto das roles `anon` e `authenticated` quando elas existem. O app usa a connection string Postgres server-side, nao a Data API publica.
+
+As recomendacoes do agente Supabase instalado foram aproveitadas no desenho operacional: conexao via pooler, `prepare_threshold=None` para compatibilidade com transaction pooling, chave primaria composta, identificadores simples em lowercase e `UPSERT` atomico para merge de pontos por serie/data.
+
 ## Regras centrais preservadas na arquitetura
 
 - CDI acumulado com `data_inicial_efetiva <= data < data_final_efetiva`

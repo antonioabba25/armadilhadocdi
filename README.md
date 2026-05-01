@@ -122,6 +122,9 @@ Interpretacao:
 |   `-- referencias.md
 |-- scripts/
 |   `-- sync_market_data.py
+|-- supabase/
+|   `-- migrations/
+|       `-- 20260501000000_create_market_rates.sql
 |-- tests/
 |   |-- test_cache.py
 |   |-- test_calculations.py
@@ -218,6 +221,8 @@ create table if not exists market_rates (
 ```
 
 Use a connection string Postgres do Supabase no servidor. Para ambientes sem IPv6 ou com muitas conexoes temporarias, prefira a string do pooler indicada pelo Supabase. O valor de `SUPABASE_DATABASE_URL` e segredo e nao deve ser versionado.
+
+Para setup manual ou auditoria do schema, a migracao versionada esta em `supabase/migrations/20260501000000_create_market_rates.sql`. Ela cria a tabela, habilita RLS e revoga acesso direto das roles publicas do Supabase. O app acessa o banco server-side pela connection string Postgres.
 
 ## Publicacao do MVP
 

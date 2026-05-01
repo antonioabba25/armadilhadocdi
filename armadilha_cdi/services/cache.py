@@ -202,6 +202,7 @@ class PostgresTimeSeriesCache:
 
         return psycopg.connect(
             self.database_url,
+            application_name="armadilha_cdi",
             connect_timeout=self.connect_timeout_seconds,
             prepare_threshold=None,
         )
