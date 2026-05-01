@@ -21,7 +21,9 @@ EMPTY_STATE_MESSAGE = (
     "Preencha o formulario e clique em 'Analisar periodo' para gerar o resultado."
 )
 LOADING_MESSAGE = "Buscando dados do Banco Central e calculando o resultado..."
-UNEXPECTED_ERROR_TEMPLATE = "Ocorreu um erro inesperado: {error}"
+UNEXPECTED_ERROR_MESSAGE = (
+    "Ocorreu um erro inesperado. Tente novamente em instantes."
+)
 
 CHART_TITLE = "Grafico comparativo"
 CHART_DATA_EXPANDER_LABEL = "Ver base diaria do grafico"
