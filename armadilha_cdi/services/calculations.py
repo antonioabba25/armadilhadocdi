@@ -11,6 +11,9 @@ from armadilha_cdi.config import (
 from armadilha_cdi.exceptions import DataUnavailableError, DomainValidationError
 from armadilha_cdi.models import CalculationResult, QuoteLookup
 
+BUSINESS_DAYS_PER_YEAR = 252
+BUSINESS_DAYS_PER_MONTH = 22
+
 
 def validate_inputs(start_date: date, end_date: date, initial_brl: float) -> None:
     if start_date < EARLIEST_SUPPORTED_DATE:
@@ -174,6 +177,23 @@ def calculate_cdi_factor(
         raise DataUnavailableError("Nao ha dados de CDI suficientes para o periodo informado.")
 
     return factor, days_used
+
+
+def calculate_equivalent_rate_percentage(
+    period_percentage: float,
+    period_business_days: int,
+    equivalent_business_days: int,
+) -> float:
+    if period_business_days <= 0:
+        raise ValueError("period_business_days must be greater than zero.")
+    if equivalent_business_days <= 0:
+        raise ValueError("equivalent_business_days must be greater than zero.")
+
+    period_factor = 1 + (period_percentage / 100)
+    equivalent_factor = period_factor ** (
+        equivalent_business_days / period_business_days
+    )
+    return (equivalent_factor - 1) * 100
 
 
 def calculate_result(

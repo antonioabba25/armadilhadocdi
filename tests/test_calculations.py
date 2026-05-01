@@ -6,6 +6,7 @@ import unittest
 from armadilha_cdi.exceptions import DataUnavailableError, DomainValidationError
 from armadilha_cdi.services.calculations import (
     QuoteResolver,
+    calculate_equivalent_rate_percentage,
     calculate_result,
     lookup_quote_with_fallback,
 )
@@ -37,6 +38,32 @@ class CalculationTests(unittest.TestCase):
         expected_factor = (1 + 0.10 / 100) * (1 + 0.20 / 100)
         self.assertAlmostEqual(result.cdi_factor, expected_factor, places=10)
         self.assertEqual(result.cdi_days_used, 2)
+
+    def test_equivalent_rate_preserves_annual_rate_for_252_business_days(self) -> None:
+        equivalent_rate = calculate_equivalent_rate_percentage(
+            period_percentage=13.25,
+            period_business_days=252,
+            equivalent_business_days=252,
+        )
+
+        self.assertAlmostEqual(equivalent_rate, 13.25, places=10)
+
+    def test_equivalent_rate_converts_period_percentage(self) -> None:
+        equivalent_rate = calculate_equivalent_rate_percentage(
+            period_percentage=10.00,
+            period_business_days=44,
+            equivalent_business_days=22,
+        )
+
+        self.assertAlmostEqual(equivalent_rate, ((1.10**0.5) - 1) * 100, places=10)
+
+    def test_equivalent_rate_rejects_empty_period(self) -> None:
+        with self.assertRaises(ValueError):
+            calculate_equivalent_rate_percentage(
+                period_percentage=10.00,
+                period_business_days=0,
+                equivalent_business_days=252,
+            )
 
     def test_uses_previous_quote_when_target_date_has_no_exact_quote(self) -> None:
         quote = lookup_quote_with_fallback(

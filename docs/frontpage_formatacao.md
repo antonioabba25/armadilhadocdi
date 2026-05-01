@@ -33,15 +33,14 @@ A ordem atual dos blocos da frontpage é:
 3. Legenda de intervalo mínimo de datas.
 4. Formulário de entrada em uma linha com três colunas.
 5. Estado vazio ou loading.
-6. Resumo analítico com alerta interpretativo.
-7. Métricas principais.
-8. Notas de cotação e período efetivo.
-9. Tabela técnica.
-10. Gráfico comparativo.
-11. Expander com base diária do gráfico.
-12. Expander com metodologia.
+6. Métricas principais.
+7. Notas de cotação e período efetivo.
+8. Tabela técnica.
+9. Gráfico comparativo.
+10. Expander com base diária do gráfico.
+11. Expander com metodologia.
 
-Essa ordem pode ser refinada visualmente, mas a tela deve continuar conduzindo o usuário de entrada -> interpretação -> métricas -> evidências.
+Essa ordem pode ser refinada visualmente, mas a tela deve continuar conduzindo o usuário de entrada -> métricas -> evidências.
 
 ## Conteúdo textual fixo
 
@@ -68,7 +67,6 @@ Observação para redesign: pode-se corrigir acentos na interface final se os ar
 
 ### Seções de resultado
 
-- Resumo: `Resumo analitico`
 - Gráfico: `Grafico comparativo`
 - Expander do gráfico: `Ver base diaria do grafico`
 - Expander metodológico: `Metodologia usada`
@@ -109,35 +107,7 @@ Observação para redesign: pode-se corrigir acentos na interface final se os ar
 
 ## Resumo analítico
 
-O resumo começa com um alerta interpretativo que muda de estado conforme a diferença entre CDI acumulado e variação do USD/BRL:
-
-- Estado positivo: alerta de sucesso.
-- Estado negativo: alerta de erro.
-- Estado neutro: alerta informativo.
-
-### Regras de classificação visual
-
-- Se `CDI acumulado - variação USD/BRL > 0,005 p.p.`, usar estado positivo.
-- Se `CDI acumulado - variação USD/BRL < -0,005 p.p.`, usar estado negativo.
-- Caso contrário, usar estado neutro.
-
-### Títulos possíveis do alerta
-
-- Neutro: `O CDI praticamente empatou com a variacao do dolar.`
-- Positivo: `A aplicacao no CDI compensou a variacao do dolar.`
-- Negativo: `A aplicacao no CDI nao compensou a variacao do dolar.`
-
-### Texto detalhado do alerta
-
-Template:
-
-`No periodo efetivo, o CDI acumulou {cdi_percentage} em reais, enquanto o USD/BRL variou {usd_variation}. Assim, o CDI ficou {absolute_gap} {comparison} variacao do dolar. Em equivalente em USD, o capital saiu de {initial_usd} para {final_usd_with_cdi}, uma diferenca de {usd_delta} ({real_usd_return}).`
-
-Termos de comparação:
-
-- `igual a`
-- `acima da`
-- `abaixo da`
+O resumo não exibe mais um alerta de conclusão dizendo se o CDI compensou ou não a variação do dólar. A leitura deve ser feita pelas métricas principais, especialmente o resultado relativo em USD, pela tabela técnica e pelo gráfico comparativo.
 
 ## Métricas
 
@@ -158,11 +128,13 @@ Usa quatro colunas:
 - `USD no inicio`
 - `USD no fim`
 - `Variacao USD/BRL`
-- `Valor final com CDI em USD`
+- `Variacao % em USD`
 
 ### Hierarquia recomendada
 
-A métrica mais importante para a leitura do produto é o resultado em USD, hoje exposto como `Valor final com CDI em USD` e calculado a partir de `real_usd_return_percentage`. Em um redesign, essa informação pode ganhar mais peso visual, desde que o valor nominal em BRL não vire a conclusão principal da tela.
+A métrica mais importante para a leitura do produto é a variacao % em USD, calculada a partir de `real_usd_return_percentage`. Em um redesign, essa informação pode ganhar mais peso visual, desde que o valor nominal em BRL não vire a conclusão principal da tela.
+
+Os cards percentuais exibem, em detalhe menor, a taxa equivalente anual e mensal do percentual observado no periodo. O texto deve seguir o formato `Equiv.: 12,34% a.a. | 0,97% a.m.` e usar os dias uteis de CDI considerados como denominador.
 
 ## Formatação numérica
 
@@ -206,7 +178,7 @@ A métrica mais importante para a leitura do produto é o resultado em USD, hoje
 
 ## Notas abaixo das métricas
 
-As notas devem continuar visíveis após o resumo, pois explicam quando houve fallback de cotação ou ajuste de período.
+As notas devem continuar visíveis após o resumo, pois explicam quando a cotação veio de uma data anterior ou quando houve ajuste de período.
 
 ### Cotação inicial ou final encontrada na própria data
 
@@ -214,11 +186,11 @@ Template:
 
 `Cotacao {quote_position} encontrada na propria data.`
 
-### Cotação inicial ou final com fallback
+### Cotação inicial ou final usando data anterior
 
 Template:
 
-`Cotacao {quote_position} com fallback: {requested_date} -> {effective_date}.`
+`Cotacao {quote_position}: usada a ultima PTAX oficial anterior ({requested_date} -> {effective_date}).`
 
 ### Período efetivo igual ao solicitado
 
@@ -263,22 +235,22 @@ O gráfico mostra séries acumuladas ao longo do período efetivo.
 ### Séries visíveis
 
 - `CDI Acumulado (%)`
-- `USD Acumulado (%)`
-- `Ganho Real em USD (%)`
+- `USD/BRL Acumulado (%)`
+- `Variacao % em USD`
 
 ### Séries disponíveis na base diária
 
 - `data`
 - `CDI Acumulado (%)`
-- `USD Acumulado (%)`
-- `Ganho Real em USD (%)`
+- `USD/BRL Acumulado (%)`
+- `Variacao % em USD`
 - `Capital Corrigido (BRL)`
 - `Cotacao USD/BRL`
 
 ### Regras visuais recomendadas para o gráfico
 
-- CDI acumulado, USD acumulado e ganho real em USD devem ser distinguíveis por cor e legenda.
-- A série de ganho real em USD deve ser fácil de identificar, pois representa a pergunta central da tela.
+- CDI acumulado, variacao do USD/BRL e variacao % em USD devem ser distinguíveis por cor e legenda.
+- A série de variacao % em USD deve ser fácil de identificar, pois representa a pergunta central da tela.
 - O gráfico deve ocupar a largura disponível.
 - Evitar decoração que atrapalhe a leitura de cruzamentos, quedas e divergências entre CDI e dólar.
 
@@ -302,7 +274,8 @@ Conteúdo atual:
 - Calculos, metricas e grafico consideram apenas dias uteis presentes nas series oficiais; fins de semana e feriados nao sao interpolados.
 - Datas sem dado oficial sao resolvidas para a ultima data util disponivel. Quando a PTAX nao existe na data efetiva, o app usa a cotacao anterior mais proxima, limitada a 15 dias.
 - A diferenca "CDI acima/abaixo do USD/BRL" e medida em pontos percentuais: CDI acumulado menos variacao acumulada do dolar.
-- O ganho real em USD mede se o capital corrigido pelo CDI compraria mais ou menos dolares no fim do periodo do que comprava no inicio.
+- A variacao em USD mede se o capital corrigido pelo CDI compraria mais ou menos dolares no fim do periodo do que comprava no inicio.
+- As taxas equivalentes anual e mensal sao anualizacoes/mensalizacoes matematicas do percentual observado, usando 252 e 22 dias uteis, e nao representam previsao.
 - O calculo nao considera impostos, taxas, spread cambial, IOF, custos operacionais ou diferencas entre PTAX e cotacoes praticadas por uma instituicao.
 - Esta analise e uma comparacao historica com dados oficiais; nao e recomendacao de investimento.
 ```
@@ -330,7 +303,7 @@ Em um redesign, preservar a semântica:
 - Datas futuras não são permitidas.
 - Datas sem dado oficial são resolvidas para a última data útil disponível.
 - A UI deve informar quando a data efetiva da cotação difere da data solicitada.
-- O fallback de USD/BRL é limitado a 15 dias.
+- A busca por cotacao USD/BRL anterior é limitada a 15 dias.
 - O CDI usa janela `data_inicial_efetiva <= data < data_final_efetiva`.
 - Cálculos, métricas e gráfico consideram apenas dias úteis das séries oficiais.
 - O app não considera impostos, taxas, spread cambial, IOF ou custos operacionais.
@@ -340,12 +313,12 @@ Em um redesign, preservar a semântica:
 
 - Manter a primeira dobra focada em título, descrição curta e formulário.
 - Evitar transformar a tela em landing page promocional; ela deve continuar sendo uma ferramenta.
-- Dar destaque à interpretação do resultado logo após o cálculo.
+- Dar destaque às métricas comparativas logo após o cálculo.
 - Não fazer o ganho nominal em BRL parecer a conclusão principal.
 - Agrupar métricas de BRL, USD e comparação cambial de forma escaneável.
 - Usar densidade visual moderada: a aplicação é analítica, não editorial.
 - Priorizar leitura clara em desktop e mobile.
-- Preservar todas as mensagens de fallback de cotação e período efetivo.
+- Preservar todas as mensagens de cotação em data anterior e período efetivo.
 - Preservar acesso à tabela técnica e à metodologia.
 - Evitar elementos decorativos que confundam a leitura financeira.
 - Não introduzir novas regras de cálculo na camada visual.
@@ -358,9 +331,8 @@ Antes de aceitar uma versão otimizada da frontpage, conferir:
 - O formulário contém as mesmas entradas e restrições.
 - A data mínima 01/07/1994 continua explícita.
 - O estado vazio e o loading continuam presentes.
-- O alerta interpretativo mantém estados positivo, negativo e neutro.
 - Todas as sete métricas atuais continuam acessíveis.
-- As notas de fallback de cotação aparecem quando aplicável.
+- As notas de cotação em data anterior aparecem quando aplicável.
 - A tabela técnica continua disponível.
 - O gráfico mantém as três séries principais.
 - A base diária do gráfico continua acessível.

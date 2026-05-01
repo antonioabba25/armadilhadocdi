@@ -9,6 +9,13 @@
 - PTAX - conjunto de dados no portal de dados abertos: https://dadosabertos.bcb.gov.br/dataset/dolar-americano-usd-todos-os-boletins-diarios
 - FAQ do BCB sobre taxas divulgadas e PTAX: https://www.bcb.gov.br/meubc/faqs/p/o-que-significam-as-taxas-divulgadas-pelo-banco-central
 
+## Referencias de publicacao
+
+- Streamlit Community Cloud: https://streamlit.io/cloud
+- Deploy no Streamlit Community Cloud: https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/deploy
+- Secrets no Streamlit Community Cloud: https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management
+- Billing e quotas do Supabase: https://supabase.com/docs/guides/platform/billing-on-supabase
+
 ## Referencias complementares para extensoes futuras
 
 ### FRED / Federal Reserve Bank of St. Louis

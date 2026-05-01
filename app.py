@@ -11,7 +11,12 @@ from armadilha_cdi.exceptions import DomainValidationError, MarketDataError
 from armadilha_cdi import frontpage_texts as copy
 from armadilha_cdi.models import CalculationResult, MarketDataBundle
 from armadilha_cdi.services.cache import CacheConfigurationError, build_cache_repository
-from armadilha_cdi.services.calculations import calculate_result
+from armadilha_cdi.services.calculations import (
+    BUSINESS_DAYS_PER_MONTH,
+    BUSINESS_DAYS_PER_YEAR,
+    calculate_equivalent_rate_percentage,
+    calculate_result,
+)
 from armadilha_cdi.services.charts import build_chart_dataframe
 from armadilha_cdi.services.data_providers import BCBMarketDataProvider
 
@@ -68,6 +73,23 @@ def cdi_vs_usd_gap_percentage_points(result: CalculationResult) -> float:
     return result.cdi_percentage - usd_variation_percentage(result)
 
 
+def equivalent_rate_detail(period_percentage: float, business_days: int) -> str:
+    annual_rate = calculate_equivalent_rate_percentage(
+        period_percentage,
+        business_days,
+        BUSINESS_DAYS_PER_YEAR,
+    )
+    monthly_rate = calculate_equivalent_rate_percentage(
+        period_percentage,
+        business_days,
+        BUSINESS_DAYS_PER_MONTH,
+    )
+    return copy.METRIC_EQUIVALENT_RATE_TEMPLATE.format(
+        annual=format_percent(annual_rate),
+        monthly=format_percent(monthly_rate),
+    )
+
+
 def html_escape(value: object) -> str:
     return escape(str(value), quote=True)
 
@@ -79,22 +101,24 @@ def render_frontpage_styles() -> None:
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;900&family=Space+Grotesk:wght@500;600&display=swap');
 
         :root {
+            color-scheme: light;
             --surface: #faf9f6;
             --surface-lowest: #ffffff;
             --surface-low: #f4f3f1;
             --surface-variant: #e3e2e0;
             --on-surface: #1a1c1a;
-            --on-surface-variant: #4b4738;
+            --on-surface-variant: #3f3a2f;
             --outline: #7c7766;
             --outline-variant: #cdc6b3;
-            --primary: #6c5e06;
+            --primary: #5f5200;
             --primary-container: #c5b358;
-            --on-primary-container: #504500;
+            --on-primary-container: #403813;
             --secondary: #75584c;
             --tertiary: #50606f;
             --error: #ba1a1a;
             --error-container: #ffdad6;
             --info-container: #d4e4f6;
+            --on-info-container: #314150;
         }
 
         html, body, [data-testid="stAppViewContainer"] {
@@ -224,6 +248,26 @@ def render_frontpage_styles() -> None:
             font-family: Inter, sans-serif;
         }
 
+        div[data-testid="stDateInput"] input,
+        div[data-testid="stNumberInput"] input {
+            background-color: var(--surface-lowest);
+            color: var(--on-surface);
+            caret-color: var(--on-surface);
+            border-color: var(--outline);
+        }
+
+        div[data-testid="stDateInput"] input:focus,
+        div[data-testid="stNumberInput"] input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 1px var(--primary);
+        }
+
+        div[data-testid="stDateInput"] svg,
+        div[data-testid="stNumberInput"] svg {
+            color: var(--on-surface-variant);
+            fill: currentColor;
+        }
+
         div[data-testid="stFormSubmitButton"] button {
             width: 100%;
             min-height: 42px;
@@ -236,6 +280,13 @@ def render_frontpage_styles() -> None:
             font-size: 14px;
             font-weight: 600;
             letter-spacing: 0.03em;
+        }
+
+        div[data-testid="stFormSubmitButton"] button:hover,
+        div[data-testid="stFormSubmitButton"] button:focus {
+            border-color: var(--primary);
+            background: #d2c365;
+            color: var(--on-primary-container);
         }
 
         .cdi-alert {
@@ -275,7 +326,7 @@ def render_frontpage_styles() -> None:
         }
 
         .cdi-alert-neutral .cdi-alert-icon {
-            color: var(--tertiary);
+            color: var(--on-info-container);
         }
 
         .cdi-alert h2,
@@ -347,6 +398,7 @@ def render_frontpage_styles() -> None:
             color: var(--on-surface-variant);
             font-size: 13px;
             line-height: 1.35;
+            white-space: pre-line;
         }
 
         .cdi-notes {
@@ -454,6 +506,17 @@ def render_frontpage_styles() -> None:
             border-color: var(--outline-variant);
             border-radius: 8px;
             background: var(--surface);
+            color: var(--on-surface);
+        }
+
+        div[data-testid="stExpander"] details,
+        div[data-testid="stExpander"] summary {
+            background: var(--surface);
+            color: var(--on-surface);
+        }
+
+        div[data-testid="stExpander"] summary:hover {
+            background: var(--surface-low);
         }
 
         div[data-testid="stExpander"] summary p {
@@ -461,8 +524,27 @@ def render_frontpage_styles() -> None:
             font-size: 13px;
             font-weight: 600;
             letter-spacing: 0.03em;
-            color: var(--on-surface-variant);
+            color: var(--on-surface);
             text-transform: uppercase;
+        }
+
+        div[data-testid="stExpander"] summary svg {
+            color: var(--on-surface);
+            fill: currentColor;
+        }
+
+        div[data-testid="stExpander"] [data-testid="stMarkdownContainer"],
+        div[data-testid="stExpander"] [data-testid="stMarkdownContainer"] p,
+        div[data-testid="stExpander"] [data-testid="stMarkdownContainer"] li {
+            color: var(--on-surface);
+        }
+
+        div[data-testid="stExpander"] [data-testid="stMarkdownContainer"] code {
+            background: #ece7d8;
+            border: 1px solid var(--outline-variant);
+            border-radius: 4px;
+            color: var(--on-surface);
+            padding: 1px 4px;
         }
 
         .cdi-footer {
@@ -644,44 +726,6 @@ def render_metric_card(
     )
 
 
-def result_status(result: CalculationResult) -> str:
-    gap = cdi_vs_usd_gap_percentage_points(result)
-    if gap > 0.005:
-        return "positive"
-    if gap < -0.005:
-        return "negative"
-    return "neutral"
-
-
-def result_interpretation(result: CalculationResult) -> tuple[str, str]:
-    usd_variation = usd_variation_percentage(result)
-    gap = cdi_vs_usd_gap_percentage_points(result)
-    absolute_gap = abs(gap)
-    usd_delta = result.final_usd_with_cdi - result.initial_usd
-
-    if abs(gap) < 0.005:
-        title = copy.INTERPRETATION_TIE_TITLE
-        comparison = copy.COMPARISON_EQUAL
-    elif gap > 0:
-        title = copy.INTERPRETATION_COMPENSATED_TITLE
-        comparison = copy.COMPARISON_ABOVE
-    else:
-        title = copy.INTERPRETATION_NOT_COMPENSATED_TITLE
-        comparison = copy.COMPARISON_BELOW
-
-    details = copy.INTERPRETATION_DETAILS_TEMPLATE.format(
-        cdi_percentage=format_percent(result.cdi_percentage),
-        usd_variation=format_percent(usd_variation),
-        absolute_gap=format_percentage_points(absolute_gap),
-        comparison=comparison,
-        initial_usd=format_usd(result.initial_usd),
-        final_usd_with_cdi=format_usd(result.final_usd_with_cdi),
-        usd_delta=format_usd(usd_delta),
-        real_usd_return=format_percent(result.real_usd_return_percentage),
-    )
-    return title, details
-
-
 def quote_note(result: CalculationResult, quote_position: str) -> str:
     requested = (
         result.start_date
@@ -695,7 +739,7 @@ def quote_note(result: CalculationResult, quote_position: str) -> str:
     )
     if requested == effective:
         return copy.QUOTE_EXACT_TEMPLATE.format(quote_position=quote_position)
-    return copy.QUOTE_FALLBACK_TEMPLATE.format(
+    return copy.QUOTE_PREVIOUS_DATE_TEMPLATE.format(
         quote_position=quote_position,
         requested_date=requested.strftime("%d/%m/%Y"),
         effective_date=effective.strftime("%d/%m/%Y"),
@@ -716,25 +760,6 @@ def market_period_note(result: CalculationResult) -> str:
 
 
 def render_summary(result: CalculationResult) -> None:
-    title, details = result_interpretation(result)
-    status = result_status(result)
-    icon = "✓" if status == "positive" else "!" if status == "negative" else "i"
-
-    st.markdown(
-        f"""
-        <section id="comparativo">
-            <div class="cdi-alert cdi-alert-{html_escape(status)}">
-                <div class="cdi-alert-icon">{html_escape(icon)}</div>
-                <div>
-                    <h2>{html_escape(title)}</h2>
-                    <p>{html_escape(details)}</p>
-                </div>
-            </div>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-
     col1, col2, col3 = st.columns(3)
     with col1:
         render_metric_card(copy.METRIC_INITIAL_BRL, format_brl(result.initial_brl))
@@ -748,6 +773,7 @@ def render_summary(result: CalculationResult) -> None:
         render_metric_card(
             copy.METRIC_CDI_ACCUMULATED,
             format_percent(result.cdi_percentage),
+            detail=equivalent_rate_detail(result.cdi_percentage, result.cdi_days_used),
             highlight=True,
             tone="positive",
         )
@@ -767,7 +793,7 @@ def render_summary(result: CalculationResult) -> None:
         render_metric_card(
             copy.METRIC_FINAL_USD_WITH_CDI,
             format_usd(result.final_usd_with_cdi),
-            detail=f"Ganho real {format_percent(result.real_usd_return_percentage)}",
+            detail=f"Variacao % em USD {format_percent(result.real_usd_return_percentage)}",
             highlight=True,
             tone=real_usd_tone,
         )
@@ -775,14 +801,20 @@ def render_summary(result: CalculationResult) -> None:
         render_metric_card(
             copy.METRIC_USD_BRL_VARIATION,
             format_percent(usd_variation),
-            detail=f"{result.initial_usdbrl:,.4f} -> {result.final_usdbrl:,.4f}",
+            detail=(
+                f"{equivalent_rate_detail(usd_variation, result.cdi_days_used)}\n"
+                f"{result.initial_usdbrl:,.4f} -> {result.final_usdbrl:,.4f}"
+            ),
             tone=usd_variation_tone,
         )
     with col7:
         render_metric_card(
-            copy.METRIC_REAL_USD_GAIN,
+            copy.METRIC_USD_PERCENT_VARIATION,
             format_percent(result.real_usd_return_percentage),
-            detail="Resultado relativo em USD",
+            detail=equivalent_rate_detail(
+                result.real_usd_return_percentage,
+                result.cdi_days_used,
+            ),
             tone=real_usd_tone,
         )
 
@@ -854,7 +886,7 @@ def chart_long_dataframe(chart_df: pd.DataFrame) -> pd.DataFrame:
     visible_columns = [
         copy.CHART_CDI_ACCUMULATED,
         copy.CHART_USD_ACCUMULATED,
-        copy.CHART_REAL_USD_GAIN,
+        copy.CHART_USD_PERCENT_VARIATION,
     ]
     plot_df = chart_df[[copy.CHART_DATE, *visible_columns]].copy()
     plot_df[copy.CHART_DATE] = pd.to_datetime(plot_df[copy.CHART_DATE])
@@ -875,7 +907,7 @@ def render_chart_panel(chart_df: pd.DataFrame) -> None:
                 <div class="cdi-legend">
                     <span class="cdi-legend-item"><span class="cdi-dot cdi-dot-cdi"></span>CDI</span>
                     <span class="cdi-legend-item"><span class="cdi-dot cdi-dot-usd"></span>USD/BRL</span>
-                    <span class="cdi-legend-item"><span class="cdi-dot cdi-dot-real"></span>Ganho real USD</span>
+                    <span class="cdi-legend-item"><span class="cdi-dot cdi-dot-real"></span>Variacao % em USD</span>
                 </div>
             </div>
         </div>
@@ -916,7 +948,7 @@ def render_chart_panel(chart_df: pd.DataFrame) -> None:
                         "domain": [
                             copy.CHART_CDI_ACCUMULATED,
                             copy.CHART_USD_ACCUMULATED,
-                            copy.CHART_REAL_USD_GAIN,
+                            copy.CHART_USD_PERCENT_VARIATION,
                         ],
                         "range": ["#6c5e06", "#75584c", "#50606f"],
                     },

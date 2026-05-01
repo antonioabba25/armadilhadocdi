@@ -23,30 +23,14 @@ EMPTY_STATE_MESSAGE = (
 LOADING_MESSAGE = "Buscando dados do Banco Central e calculando o resultado..."
 UNEXPECTED_ERROR_TEMPLATE = "Ocorreu um erro inesperado: {error}"
 
-SUMMARY_TITLE = "Resumo analitico"
 CHART_TITLE = "Grafico comparativo"
 CHART_DATA_EXPANDER_LABEL = "Ver base diaria do grafico"
 METHODOLOGY_EXPANDER_LABEL = "Metodologia usada"
 
-INTERPRETATION_TIE_TITLE = "O CDI praticamente empatou com a variacao do dolar."
-INTERPRETATION_COMPENSATED_TITLE = "A aplicacao no CDI compensou a variacao do dolar."
-INTERPRETATION_NOT_COMPENSATED_TITLE = (
-    "A aplicacao no CDI nao compensou a variacao do dolar."
-)
-COMPARISON_EQUAL = "igual a"
-COMPARISON_ABOVE = "acima da"
-COMPARISON_BELOW = "abaixo da"
-INTERPRETATION_DETAILS_TEMPLATE = (
-    "No periodo efetivo, o CDI acumulou {cdi_percentage} em reais, "
-    "enquanto o USD/BRL variou {usd_variation}. Assim, o CDI ficou "
-    "{absolute_gap} {comparison} variacao do dolar. Em equivalente em USD, "
-    "o capital saiu de {initial_usd} para {final_usd_with_cdi}, "
-    "uma diferenca de {usd_delta} ({real_usd_return})."
-)
-
 QUOTE_EXACT_TEMPLATE = "Cotacao {quote_position} encontrada na propria data."
-QUOTE_FALLBACK_TEMPLATE = (
-    "Cotacao {quote_position} com fallback: {requested_date} -> {effective_date}."
+QUOTE_PREVIOUS_DATE_TEMPLATE = (
+    "Cotacao {quote_position}: usada a ultima PTAX oficial anterior "
+    "({requested_date} -> {effective_date})."
 )
 QUOTE_POSITION_INITIAL = "inicial"
 QUOTE_POSITION_FINAL = "final"
@@ -57,11 +41,12 @@ MARKET_PERIOD_FALLBACK_TEMPLATE = (
 
 METRIC_INITIAL_BRL = "Valor inicial"
 METRIC_FINAL_BRL = "Valor final com CDI em BRL"
-METRIC_CDI_ACCUMULATED = "CDI acumulado"
+METRIC_CDI_ACCUMULATED = "CDI acumulado em BRL"
 METRIC_INITIAL_USD = "USD no inicio"
 METRIC_FINAL_USD_WITH_CDI = "USD no fim"
 METRIC_USD_BRL_VARIATION = "Variacao USD/BRL"
-METRIC_REAL_USD_GAIN = "Valor final com CDI em USD"
+METRIC_USD_PERCENT_VARIATION = "Variacao % em USD"
+METRIC_EQUIVALENT_RATE_TEMPLATE = "Equiv.: {annual} a.a. | {monthly} a.m."
 
 TECHNICAL_TABLE_METRIC_COLUMN = "Metrica"
 TECHNICAL_TABLE_VALUE_COLUMN = "Valor"
@@ -75,8 +60,8 @@ TECHNICAL_TABLE_CDI_BUSINESS_DAYS = "Dias uteis de CDI considerados"
 
 CHART_CDI_ACCUMULATED = "CDI Acumulado (%)"
 CHART_DATE = "data"
-CHART_USD_ACCUMULATED = "USD Acumulado (%)"
-CHART_REAL_USD_GAIN = "Ganho Real em USD (%)"
+CHART_USD_ACCUMULATED = "USD/BRL Acumulado (%)"
+CHART_USD_PERCENT_VARIATION = "Variacao % em USD"
 CHART_ADJUSTED_CAPITAL = "Capital Corrigido (BRL)"
 CHART_USD_BRL_QUOTE = "Cotacao USD/BRL"
 
@@ -87,7 +72,8 @@ METHODOLOGY_TEXT = """
 - Calculos, metricas e grafico consideram apenas dias uteis presentes nas series oficiais; fins de semana e feriados nao sao interpolados.
 - Datas sem dado oficial sao resolvidas para a ultima data util disponivel. Quando a PTAX nao existe na data efetiva, o app usa a cotacao anterior mais proxima, limitada a 15 dias.
 - A diferenca "CDI acima/abaixo do USD/BRL" e medida em pontos percentuais: CDI acumulado menos variacao acumulada do dolar.
-- O ganho real em USD mede se o capital corrigido pelo CDI compraria mais ou menos dolares no fim do periodo do que comprava no inicio.
+- A variacao em USD mede se o capital corrigido pelo CDI compraria mais ou menos dolares no fim do periodo do que comprava no inicio.
+- As taxas equivalentes anual e mensal sao anualizacoes/mensalizacoes matematicas do percentual observado, usando 252 e 22 dias uteis, e nao representam previsao.
 - O calculo nao considera impostos, taxas, spread cambial, IOF, custos operacionais ou diferencas entre PTAX e cotacoes praticadas por uma instituicao.
 - Esta analise e uma comparacao historica com dados oficiais; nao e recomendacao de investimento.
 """

@@ -55,6 +55,14 @@ valor_final_brl = valor_inicial_brl * fator_acumulado
 cdi_percentual = (fator_acumulado - 1) * 100
 ```
 
+Para contextualizar os percentuais de periodo exibidos na frontpage, o app calcula taxas equivalentes anual e mensal:
+
+```python
+taxa_equivalente = ((1 + percentual_periodo / 100) ** (dias_equivalentes / dias_uteis) - 1) * 100
+```
+
+O denominador `dias_uteis` e a quantidade de dias de CDI usados no periodo efetivo. O ano equivalente usa `252` dias uteis e o mes equivalente usa `22` dias uteis. Essa taxa equivalente e apenas uma anualizacao/mensalizacao matematica do percentual historico observado, nao uma previsao de retorno ou cambio.
+
 ## Etapa 2: resolucao das cotacoes USD/BRL
 
 Nem toda data possui cotacao PTAX disponivel. Isso acontece, por exemplo, em fins de semana e feriados.
@@ -94,12 +102,12 @@ usd_inicial = valor_inicial_brl / cotacao_inicial
 usd_final_com_cdi = valor_final_brl / cotacao_final
 ```
 
-## Etapa 4: ganho real em USD
+## Etapa 4: variacao percentual em USD
 
 Essa e a metrica central do produto:
 
 ```python
-rentabilidade_usd_real = (usd_final_com_cdi / usd_inicial - 1) * 100
+variacao_percentual_usd = (usd_final_com_cdi / usd_inicial - 1) * 100
 ```
 
 Interpretacao:
@@ -122,7 +130,7 @@ Entao:
 ```python
 usd_inicial = 10000 / 4.00 = 2500.00
 usd_final_com_cdi = 14000 / 5.20 = 2692.31
-rentabilidade_usd_real = (2692.31 / 2500.00 - 1) * 100 = 7.69%
+variacao_percentual_usd = (2692.31 / 2500.00 - 1) * 100 = 7.69%
 ```
 
 Embora o capital tenha crescido em reais, o que interessa aqui e que ele terminou com mais dolares equivalentes do que no inicio.
@@ -132,14 +140,14 @@ Embora o capital tenha crescido em reais, o que interessa aqui e que ele termino
 O grafico do MVP enfatiza comparacao e nao apenas resultado final. As series atuais sao:
 
 - `CDI Acumulado (%)`
-- `USD Acumulado (%)`
-- `Ganho Real em USD (%)`
+- `USD/BRL Acumulado (%)`
+- `Variacao % em USD`
 
 Leitura sugerida:
 
 - se a curva do USD sobe mais rapido do que a curva do CDI, o real tende a perder terreno;
-- se a curva de ganho real em USD fica negativa, o investidor teve erosao de poder relativo em dolar;
-- se a curva de ganho real em USD sobe, o CDI compensou a variacao cambial e ainda gerou ganho relativo.
+- se a curva de variacao % em USD fica negativa, o investidor teve erosao de poder relativo em dolar;
+- se a curva de variacao % em USD sobe, o CDI compensou a variacao cambial e aumentou a posicao relativa em dolar.
 
 As linhas do grafico sao geradas apenas para dias uteis presentes na serie CDI oficial. Quando o periodo solicitado comeca ou termina em fim de semana ou feriado, a visualizacao usa o periodo efetivo de mercado.
 

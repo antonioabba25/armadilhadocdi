@@ -127,7 +127,7 @@ create table if not exists market_rates (
 - data inicial em 01/07/1994 ou depois, sem fallback para dados anteriores ao real
 - datas sem dado oficial resolvidas para o ultimo dia util disponivel, exceto a borda inicial sem CDI anterior permitido, que pode usar o primeiro CDI oficial dentro da tolerancia
 - cotacao USD/BRL com fallback de ate 15 dias para tras
-- metrica principal: ganho real em USD
+- metrica principal: variacao % em USD
 - notificacao explicita quando a cotacao usada nao coincide com a data solicitada
 
 ## Por que essa separacao importa

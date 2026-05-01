@@ -22,7 +22,7 @@ O MVP atual cobre:
 - script de sincronizacao manual/agendavel para preaquecer o cache sem depender da primeira requisicao de usuario;
 - calculo analitico do capital corrigido pelo CDI;
 - conversao do capital inicial e final para USD;
-- grafico comparativo com CDI acumulado, USD acumulado e ganho real em USD.
+- grafico comparativo com CDI acumulado, variacao do USD/BRL e variacao % em USD.
 
 Os scripts exploratorios que deram origem ao produto ja foram consolidados na documentacao e removidos da base ativa. A fonte de verdade agora e o pacote `armadilha_cdi/`, seus testes e os documentos em `docs/`.
 
@@ -38,15 +38,15 @@ Resumo analitico:
 - cotacao USD/BRL final usada;
 - equivalente em USD no inicio;
 - equivalente em USD no fim apos CDI;
-- ganho real em USD;
+- variacao % em USD;
 - datas efetivas das cotacoes quando houve fallback.
 - periodo efetivo de mercado quando as datas solicitadas caem fora de dias uteis oficiais.
 
 Grafico:
 
 - `CDI Acumulado (%)`;
-- `USD Acumulado (%)`;
-- `Ganho Real em USD (%)`.
+- `USD/BRL Acumulado (%)`;
+- `Variacao % em USD`.
 
 ## Regra de calculo
 
@@ -73,6 +73,14 @@ valor_final_brl = valor_inicial_brl * fator_acumulado
 cdi_percentual = (fator_acumulado - 1) * 100
 ```
 
+Quando exibidas na frontpage, as taxas equivalentes anual e mensal usam o percentual acumulado do periodo observado e a quantidade de dias uteis de CDI efetivamente considerados:
+
+```python
+taxa_equivalente = ((1 + percentual_periodo / 100) ** (dias_equivalentes / dias_uteis) - 1) * 100
+```
+
+O ano equivalente usa `252` dias uteis e o mes equivalente usa `22` dias uteis. Essa equivalencia e uma anualizacao/mensalizacao matematica do periodo historico observado, nao uma previsao.
+
 ### USD/BRL
 
 O app usa PTAX de venda. Quando nao existe cotacao na data solicitada, ele usa a ultima cotacao anterior disponivel, limitada a 15 dias.
@@ -80,7 +88,7 @@ O app usa PTAX de venda. Quando nao existe cotacao na data solicitada, ele usa a
 ```python
 usd_inicial = valor_inicial_brl / cotacao_inicial
 usd_final_com_cdi = valor_final_brl / cotacao_final
-rentabilidade_usd_real = (usd_final_com_cdi / usd_inicial - 1) * 100
+variacao_percentual_usd = (usd_final_com_cdi / usd_inicial - 1) * 100
 ```
 
 Interpretacao:
@@ -93,6 +101,9 @@ Interpretacao:
 
 ```text
 .
+|-- .github/
+|   `-- workflows/
+|       `-- tests.yml
 |-- app.py
 |-- armadilha_cdi/
 |   |-- config.py
@@ -105,7 +116,9 @@ Interpretacao:
 |       `-- data_providers.py
 |-- docs/
 |   |-- arquitetura.md
+|   |-- publicacao.md
 |   |-- metodologia.md
+|   |-- streamlit-secrets.example.toml
 |   `-- referencias.md
 |-- scripts/
 |   `-- sync_market_data.py
@@ -205,6 +218,19 @@ create table if not exists market_rates (
 ```
 
 Use a connection string Postgres do Supabase no servidor. Para ambientes sem IPv6 ou com muitas conexoes temporarias, prefira a string do pooler indicada pelo Supabase. O valor de `SUPABASE_DATABASE_URL` e segredo e nao deve ser versionado.
+
+## Publicacao do MVP
+
+O caminho recomendado para a primeira publicacao gratuita e:
+
+- Streamlit Community Cloud para hospedar `app.py`;
+- Supabase Free como cache Postgres persistente;
+- secrets configurados no painel do Streamlit, nunca no repositorio;
+- cache pre-aquecido com `scripts/sync_market_data.py` antes de divulgar o link.
+
+Guia operacional: [docs/publicacao.md](docs/publicacao.md).
+
+Exemplo de secrets para colar no Streamlit Cloud: [docs/streamlit-secrets.example.toml](docs/streamlit-secrets.example.toml).
 
 ## Fontes de dados
 
