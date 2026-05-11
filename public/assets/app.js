@@ -1,25 +1,12 @@
 import {
-  BUSINESS_DAYS_PER_MONTH,
-  BUSINESS_DAYS_PER_YEAR,
   DataUnavailableError,
   DomainValidationError,
   buildChartSeries,
-  calculateEquivalentRatePercentage,
   calculateResult
 } from "./calculations.js";
+import { buildResultPresentation } from "./presentation.js";
 
 const DATASET_URL = "./data/market-data.latest.json";
-const FIELD_LABELS = {
-  final_brl: "Valor final em BRL",
-  cdi_percentage: "CDI acumulado",
-  initial_usdbrl: "USD/BRL inicial",
-  final_usdbrl: "USD/BRL final",
-  initial_usd: "Equivalente inicial em USD",
-  final_usd_with_cdi: "Equivalente final em USD",
-  annual_equivalent: "CDI equivalente anual",
-  monthly_equivalent: "CDI equivalente mensal",
-  cdi_days_used: "Dias uteis de CDI"
-};
 
 let marketData = null;
 
@@ -29,7 +16,6 @@ const endInput = document.querySelector("#end-date");
 const initialInput = document.querySelector("#initial-brl");
 const dataStatus = document.querySelector("#data-status");
 const resultTitle = document.querySelector("#result-title");
-const resultScore = document.querySelector("#result-score");
 const metricsGrid = document.querySelector("#metrics-grid");
 const fallbackNotice = document.querySelector("#fallback-notice");
 const chart = document.querySelector("#comparison-chart");
@@ -116,54 +102,60 @@ function updateDatasetMetadata(dataset) {
   counts.textContent = `${Object.keys(dataset.cdi_rates).length} CDI, ${Object.keys(dataset.usd_rates).length} USD/BRL`;
 }
 
-function classifyResult(value) {
-  if (Math.abs(value) < 0.1) {
-    return ["neutral", "Preservou quase tudo em USD"];
+function formatPresentationValue(row) {
+  if (row.format === "brl") {
+    return brlFormatter.format(row.value);
   }
-  if (value > 0) {
-    return ["positive", "Melhorou em USD"];
+  if (row.format === "usd") {
+    return usdFormatter.format(row.value);
   }
-  return ["negative", "Piorou em USD"];
+  if (row.format === "percent") {
+    return `${percentFormatter.format(row.value)}%`;
+  }
+  if (row.format === "quote") {
+    return numberFormatter.format(row.value);
+  }
+  if (row.format === "integer") {
+    return String(row.value);
+  }
+  if (row.format === "date") {
+    return formatDate(row.value);
+  }
+  return String(row.value);
 }
 
-function renderMetric(label, value) {
-  const metric = document.createElement("div");
-  metric.className = "metric";
-  metric.innerHTML = `<span></span><strong></strong>`;
-  metric.querySelector("span").textContent = label;
-  metric.querySelector("strong").textContent = value;
-  metricsGrid.append(metric);
+function renderPresentationSection(section, variant = "") {
+  const wrapper = document.createElement("section");
+  wrapper.className = `result-section${variant ? ` result-section-${variant}` : ""}`;
+  const title = document.createElement("h3");
+  title.textContent = section.title;
+
+  const list = document.createElement("dl");
+  list.className = "result-table";
+  for (const row of section.rows) {
+    const item = document.createElement("div");
+    const label = document.createElement("dt");
+    const value = document.createElement("dd");
+    label.textContent = row.label;
+    value.textContent = formatPresentationValue(row);
+    item.append(label, value);
+    list.append(item);
+  }
+
+  wrapper.append(title, list);
+  metricsGrid.append(wrapper);
 }
 
 function renderResult(result) {
   metricsGrid.replaceChildren();
   fallbackNotice.className = "notice";
 
-  const [classification, title] = classifyResult(result.real_usd_return_percentage);
-  resultTitle.textContent = title;
-  resultScore.className = `result-score ${classification}`;
-  resultScore.textContent = `${percentFormatter.format(result.real_usd_return_percentage)}%`;
+  resultTitle.textContent = "BRL, cambio e USD em perspectiva";
 
-  const annualEquivalent = calculateEquivalentRatePercentage(
-    result.cdi_percentage,
-    result.cdi_days_used,
-    BUSINESS_DAYS_PER_YEAR
-  );
-  const monthlyEquivalent = calculateEquivalentRatePercentage(
-    result.cdi_percentage,
-    result.cdi_days_used,
-    BUSINESS_DAYS_PER_MONTH
-  );
-
-  renderMetric(FIELD_LABELS.final_brl, brlFormatter.format(result.final_brl));
-  renderMetric(FIELD_LABELS.cdi_percentage, `${percentFormatter.format(result.cdi_percentage)}%`);
-  renderMetric(FIELD_LABELS.initial_usdbrl, numberFormatter.format(result.initial_usdbrl));
-  renderMetric(FIELD_LABELS.final_usdbrl, numberFormatter.format(result.final_usdbrl));
-  renderMetric(FIELD_LABELS.initial_usd, usdFormatter.format(result.initial_usd));
-  renderMetric(FIELD_LABELS.final_usd_with_cdi, usdFormatter.format(result.final_usd_with_cdi));
-  renderMetric(FIELD_LABELS.annual_equivalent, `${percentFormatter.format(annualEquivalent)}%`);
-  renderMetric(FIELD_LABELS.monthly_equivalent, `${percentFormatter.format(monthlyEquivalent)}%`);
-  renderMetric(FIELD_LABELS.cdi_days_used, String(result.cdi_days_used));
+  const presentation = buildResultPresentation(result);
+  renderPresentationSection(presentation.brl, "brl");
+  renderPresentationSection(presentation.exchange, "exchange");
+  renderPresentationSection(presentation.usd, "usd");
 
   const notices = [];
   if (result.effective_start_date !== result.start_date || result.effective_end_date !== result.end_date) {
@@ -182,8 +174,6 @@ function renderResult(result) {
 
 function renderError(error) {
   resultTitle.textContent = "Nao foi possivel calcular";
-  resultScore.className = "result-score negative";
-  resultScore.textContent = "--";
   metricsGrid.replaceChildren();
   fallbackNotice.className = "notice error";
   fallbackNotice.textContent = error.message || "Erro inesperado.";

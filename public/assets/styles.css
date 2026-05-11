@@ -162,59 +162,65 @@ input:focus {
   gap: 16px;
 }
 
-.result-score {
-  min-width: 140px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  color: #ffffff;
-  background: var(--muted);
-  font-size: 1.55rem;
-  font-weight: 900;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.result-score.positive {
-  background: var(--accent);
-}
-
-.result-score.negative {
-  background: var(--danger);
-}
-
-.result-score.neutral {
-  background: var(--amber);
-}
-
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+  margin-top: 22px;
 }
 
-.metric {
+.result-section {
   min-width: 0;
-  min-height: 86px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 11px;
-  background: #fbfcfa;
+  border-top: 3px solid var(--line);
+  padding-top: 12px;
 }
 
-.metric span {
-  display: block;
+.result-section-brl {
+  border-color: var(--accent);
+}
+
+.result-section-exchange {
+  border-color: var(--rose);
+}
+
+.result-section-usd {
+  border-color: var(--blue);
+}
+
+.result-section h3 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.result-table {
+  margin: 0;
+}
+
+.result-table div {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(92px, 0.75fr);
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.result-table dt {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
+  line-height: 1.25;
 }
 
-.metric strong {
-  display: block;
-  margin-top: 6px;
+.result-table dd {
+  margin: 0;
   overflow-wrap: anywhere;
-  font-size: 1.15rem;
-  line-height: 1.15;
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: right;
 }
 
 .notice {
@@ -373,7 +379,7 @@ input:focus {
   }
 
   .data-status,
-  .result-score {
+  .result-head {
     max-width: none;
     text-align: left;
   }
@@ -394,6 +400,15 @@ input:focus {
 @media (max-width: 520px) {
   .metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .result-table div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .result-table dd {
+    text-align: left;
   }
 
   .chart-wrap,
