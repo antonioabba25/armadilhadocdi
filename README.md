@@ -12,7 +12,7 @@ Como o real brasileiro entrou em circulacao em 01/07/1994, a aplicacao aceita ap
 
 ## Estado atual
 
-O MVP atual cobre:
+O MVP atual em Streamlit cobre:
 
 - entrada de `data inicial`, `data final` e `valor inicial investido` em BRL;
 - busca de CDI diario pela serie 12 do SGS/BCB;
@@ -24,7 +24,17 @@ O MVP atual cobre:
 - conversao do capital inicial e final para USD;
 - grafico comparativo com CDI acumulado, variacao do USD/BRL e variacao % em USD.
 
+Tambem existe uma primeira publicacao estatica em `public/`, com calculo no navegador, dataset JSON exportado por script e testes JavaScript. Ela ainda deve ser validada em ambiente real antes de substituir a URL principal.
+
 Os scripts exploratorios que deram origem ao produto ja foram consolidados na documentacao e removidos da base ativa. A fonte de verdade agora e o pacote `armadilha_cdi/`, seus testes e os documentos em `docs/`.
+
+## Plano de publicacao estatica
+
+Ha um plano ativo para criar uma nova publicacao web em Cloudflare Pages, com calculo no navegador e dados CDI/USD pre-gerados diariamente. Esse caminho busca eliminar a dependencia de um processo Streamlit acordado para cada acesso e reduzir o processamento no servidor a praticamente zero.
+
+O roteiro sequencial esta em [PLANS.md](PLANS.md). Ele deve ser seguido etapa por etapa: primeiro congelando o contrato de calculo, depois definindo o schema dos dados estaticos, exportando o dataset, portando o calculo para JavaScript, criando a interface estatica, automatizando a atualizacao diaria e validando tudo contra o MVP Python.
+
+As etapas locais de implementacao ja criaram contrato, schema, exportador, modulo JS, UI estatica, grafico, workflow diario e validacao cruzada. Enquanto o deploy em Cloudflare Pages nao estiver validado, o Streamlit continua sendo o MVP ativo e a referencia funcional do produto.
 
 ## Saidas
 
@@ -103,8 +113,11 @@ Interpretacao:
 .
 |-- .github/
 |   `-- workflows/
-|       `-- tests.yml
+|       |-- tests.yml
+|       `-- update-static-market-data.yml
 |-- app.py
+|-- PLANS.md
+|-- package.json
 |-- armadilha_cdi/
 |   |-- config.py
 |   |-- exceptions.py
@@ -115,17 +128,38 @@ Interpretacao:
 |       |-- charts.py
 |       `-- data_providers.py
 |-- docs/
+|   |-- archive/
+|   |   |-- README.md
+|   |   `-- frontpage_formatacao.md
 |   |-- arquitetura.md
+|   |-- contrato-calculo-estatico.md
+|   |-- dataset-estatico.md
 |   |-- publicacao.md
 |   |-- metodologia.md
 |   |-- streamlit-secrets.example.toml
 |   `-- referencias.md
+|-- public/
+|   |-- index.html
+|   |-- assets/
+|   |   |-- app.js
+|   |   |-- calculations.js
+|   |   `-- styles.css
+|   `-- data/
+|       |-- market-data.latest.json
+|       `-- market-data.manifest.json
 |-- scripts/
-|   `-- sync_market_data.py
+|   |-- export_static_market_data.py
+|   |-- js_calculate_static.mjs
+|   |-- sync_market_data.py
+|   `-- validate_static_reference_cases.py
 |-- supabase/
 |   `-- migrations/
 |       `-- 20260501000000_create_market_rates.sql
 |-- tests/
+|   |-- fixtures/
+|   |   `-- static_reference_periods.json
+|   |-- js/
+|   |   `-- calculations.test.js
 |   |-- test_cache.py
 |   |-- test_calculations.py
 |   |-- test_charts.py
@@ -144,6 +178,10 @@ Camadas principais:
 - `charts.py`: preparacao das series comparativas do grafico;
 - `models.py`: dataclasses compartilhadas entre camadas;
 - `scripts/sync_market_data.py`: sincronizacao manual ou agendada do cache;
+- `scripts/export_static_market_data.py`: exportacao do dataset estatico versionado;
+- `public/`: publicacao estatica com calculo no navegador e grafico SVG;
+- `PLANS.md`: planejamento sequencial da publicacao estatica em Cloudflare Pages;
+- `docs/archive/`: memoria de apoio que nao faz parte do fluxo operacional atual;
 - `tests/`: garantia das regras financeiras centrais.
 
 ## Como rodar
@@ -165,12 +203,21 @@ Testes:
 
 ```bash
 python3 -m unittest discover -s tests -v
+npm run test:js
 ```
 
 Sincronizar/preaquecer o cache local:
 
 ```bash
 python3 scripts/sync_market_data.py --start 2020-01-01
+```
+
+Gerar dataset estatico e validar equivalencia Python/JavaScript:
+
+```bash
+python3 scripts/export_static_market_data.py --start 1994-07-01
+python3 scripts/validate_static_reference_cases.py
+python3 -m http.server 8000 --directory public
 ```
 
 Sincronizar/preaquecer o cache no Supabase:
@@ -224,9 +271,9 @@ Use a connection string Postgres do Supabase no servidor. Para ambientes sem IPv
 
 Para setup manual ou auditoria do schema, a migracao versionada esta em `supabase/migrations/20260501000000_create_market_rates.sql`. Ela cria a tabela, habilita RLS e revoga acesso direto das roles publicas do Supabase. O app acessa o banco server-side pela connection string Postgres.
 
-## Publicacao do MVP
+## Publicacao atual do MVP
 
-O caminho recomendado para a primeira publicacao gratuita e:
+O caminho atual para a publicacao do MVP Streamlit e:
 
 - Streamlit Community Cloud para hospedar `app.py`;
 - Supabase Free como cache Postgres persistente;
@@ -236,6 +283,18 @@ O caminho recomendado para a primeira publicacao gratuita e:
 Guia operacional: [docs/publicacao.md](docs/publicacao.md).
 
 Exemplo de secrets para colar no Streamlit Cloud: [docs/streamlit-secrets.example.toml](docs/streamlit-secrets.example.toml).
+
+## Proxima publicacao web
+
+A alternativa planejada para publicacao publica principal e:
+
+- Cloudflare Pages para servir HTML, CSS, JavaScript e dados estaticos;
+- calculo financeiro executado no navegador;
+- JSON de mercado pre-gerado com CDI e USD/BRL;
+- workflow diario em GitHub Actions para atualizar `public/data/`;
+- validacao cruzada contra o MVP Python antes da troca de URL recomendada.
+
+O plano detalhado esta em [PLANS.md](PLANS.md).
 
 ## Fontes de dados
 
@@ -255,8 +314,8 @@ Veja links e observacoes em [docs/referencias.md](docs/referencias.md).
 
 ## Roadmap sugerido
 
-- adicionar endpoint HTTP para consumo externo;
+- validar a publicacao estatica em Cloudflare Pages e trocar gradualmente a URL recomendada;
 - incluir IPCA como serie opcional;
 - avaliar inflacao americana como camada adicional de leitura em USD;
-- adicionar rotina agendada de sincronizacao diaria do cache Supabase;
+- manter o Streamlit como ferramenta local/admin enquanto fizer sentido;
 - avaliar cache de leitura em memoria no Streamlit sobre o backend persistente.

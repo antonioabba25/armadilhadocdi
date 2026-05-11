@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Armadilha do CDI</title>
+    <link rel="stylesheet" href="./assets/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">CDI vs USD/BRL</p>
+          <h1>Armadilha do CDI</h1>
+        </div>
+        <div class="data-status" id="data-status">Carregando dados...</div>
+      </header>
+
+      <section class="workspace" aria-label="Calculadora">
+        <form class="control-panel" id="analysis-form">
+          <label>
+            <span>Data inicial</span>
+            <input id="start-date" name="start-date" type="date" min="1994-07-01" required>
+          </label>
+          <label>
+            <span>Data final</span>
+            <input id="end-date" name="end-date" type="date" min="1994-07-02" required>
+          </label>
+          <label>
+            <span>Valor inicial em BRL</span>
+            <input id="initial-brl" name="initial-brl" type="number" min="0.01" step="0.01" inputmode="decimal" required>
+          </label>
+          <button class="primary-action" type="submit">Analisar</button>
+        </form>
+
+        <section class="result-panel" aria-live="polite">
+          <div class="result-head">
+            <div>
+              <p class="eyebrow">Resultado principal</p>
+              <h2 id="result-title">Aguardando analise</h2>
+            </div>
+            <output class="result-score" id="result-score">--</output>
+          </div>
+
+          <div class="metrics-grid" id="metrics-grid"></div>
+          <p class="notice" id="fallback-notice"></p>
+        </section>
+      </section>
+
+      <section class="chart-panel" aria-label="Grafico comparativo">
+        <div class="chart-head">
+          <div>
+            <p class="eyebrow">Evolucao</p>
+            <h2>BRL nominal e posicao relativa em USD</h2>
+          </div>
+          <div class="legend" aria-label="Legenda do grafico">
+            <span><i class="swatch swatch-cdi"></i>CDI acumulado</span>
+            <span><i class="swatch swatch-usd"></i>USD/BRL</span>
+            <span><i class="swatch swatch-real"></i>Variacao em USD</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <svg id="comparison-chart" role="img" aria-label="Grafico de CDI acumulado, USD acumulado e variacao em USD"></svg>
+          <div class="chart-empty" id="chart-empty">Execute uma analise para ver o grafico.</div>
+        </div>
+      </section>
+
+      <section class="maintenance-panel" aria-label="Cobertura dos dados">
+        <dl>
+          <div>
+            <dt>Ultima geracao</dt>
+            <dd id="generated-at">--</dd>
+          </div>
+          <div>
+            <dt>Cobertura publicada</dt>
+            <dd id="coverage">--</dd>
+          </div>
+          <div>
+            <dt>Pontos oficiais</dt>
+            <dd id="counts">--</dd>
+          </div>
+        </dl>
+      </section>
+    </main>
+
+    <script type="module" src="./assets/app.js"></script>
+  </body>
+</html>

@@ -1,8 +1,75 @@
-# Publicacao do MVP
+# Publicacao
+
+Este projeto tem dois caminhos operacionais:
+
+- publicacao estatica em Cloudflare Pages, recomendada para a superficie publica quando validada;
+- MVP Streamlit, mantido como referencia funcional e ferramenta local/admin.
+
+## Publicacao estatica em Cloudflare Pages
+
+A versao estatica fica em `public/` e usa dados pre-gerados em `public/data/`. O navegador carrega `market-data.latest.json`, calcula localmente e nao consulta o Banco Central durante a interacao do usuario.
+
+### Build e saida
+
+- Framework preset: nenhum, static site ou equivalente.
+- Build command recomendado:
+
+```bash
+python3 -m pip install -r requirements.txt
+python3 -m unittest discover -s tests -v
+npm run test:js
+python3 scripts/export_static_market_data.py --start 1994-07-01
+python3 scripts/validate_static_reference_cases.py
+```
+
+- Output directory: `public`.
+
+Se o deploy consumir os arquivos ja commitados em `public/data/`, o build command pode ser reduzido a testes e validacao. O workflow `.github/workflows/update-static-market-data.yml` ja atualiza diariamente o dataset e commita apenas `public/data/market-data.latest.json` e `public/data/market-data.manifest.json`.
+
+### Variaveis e segredos
+
+O caminho padrao usa cache JSON local em `cache/` e nao exige segredos. Se o exportador for configurado para usar Supabase/Postgres no CI, guarde `SUPABASE_DATABASE_URL` somente em secrets do GitHub Actions ou da plataforma de deploy.
+
+### Checklist de preview
+
+1. Rode os testes locais:
+
+```bash
+python3 -m unittest discover -s tests -v
+npm run test:js
+```
+
+2. Gere ou atualize os dados:
+
+```bash
+python3 scripts/export_static_market_data.py --start 1994-07-01
+python3 scripts/validate_static_reference_cases.py
+```
+
+3. Sirva a pasta `public/` localmente:
+
+```bash
+python3 -m http.server 8000 --directory public
+```
+
+4. Acesse `http://localhost:8000`, teste um periodo recente, um historico e um com fim de semana.
+
+5. No Cloudflare Pages, confira se `/data/market-data.latest.json` e `/data/market-data.manifest.json` respondem em navegador anonimo.
+
+6. Confirme que a tela mostra a data de ultima geracao, a cobertura disponivel e avisos quando a PTAX usada difere da data efetiva.
+
+### Recuperacao em caso de falha de dados
+
+- Se o workflow diario falhar porque o Banco Central ainda nao publicou dados recentes, a pagina publicada continua usando o ultimo JSON valido.
+- Rode `Update static market data` manualmente no GitHub Actions depois da publicacao oficial.
+- Se a validacao cruzada falhar, nao force o commit do dataset; investigue primeiro diferencas entre `public/assets/calculations.js` e `armadilha_cdi/services/calculations.py`.
+- Se o cache local do CI ficar corrompido, limpe o cache do workflow e execute novamente. O exportador reconstruira os arquivos a partir do Banco Central.
+
+## Publicacao do MVP Streamlit
 
 Este e o caminho recomendado para publicar o MVP gratuitamente, mantendo o cache persistente fora do filesystem efemero do servidor.
 
-## Arquitetura de publicacao
+### Arquitetura de publicacao
 
 - App: Streamlit Community Cloud.
 - Codigo: repositorio GitHub publico.
@@ -16,7 +83,7 @@ O cache JSON local continua sendo o padrao para desenvolvimento. Em publicacao, 
 
 O backend Postgres usa `UPSERT` atomico e desativa prepared statements na conexao (`prepare_threshold=None`), o que combina com o transaction pooler do Supabase.
 
-## Checklist antes do deploy
+### Checklist antes do deploy
 
 1. Rode a suite de testes:
 
@@ -56,7 +123,7 @@ SUPABASE_CACHE_TABLE = "market_rates"
 
 9. Acesse o app publicado e rode uma consulta curta, por exemplo os ultimos 12 meses.
 
-## Preaquecimento do cache Supabase
+### Preaquecimento do cache Supabase
 
 O app cria automaticamente a tabela `market_rates` se ela nao existir. A migracao em `supabase/migrations/` existe para deixar o schema reproduzivel e incluir ajustes especificos do Supabase, como RLS ligada e acesso anonimo revogado. Antes de divulgar o link, preaqueca o cache para reduzir latencia da primeira visita:
 
@@ -78,7 +145,7 @@ python3 scripts/sync_market_data.py --start 2020-01-01
 
 Depois, rode a janela historica completa em um momento de menor pressa.
 
-## Validacao funcional pos-deploy
+### Validacao funcional pos-deploy
 
 Teste estes casos no app publicado:
 
@@ -89,7 +156,7 @@ Teste estes casos no app publicado:
 
 O esperado e que a UI mostre claramente o periodo efetivo de mercado e quando a PTAX usada nao coincide com a data solicitada.
 
-## Operacao continua
+### Operacao continua
 
 Atualize o cache de tempos em tempos fora da requisicao do usuario:
 
@@ -102,7 +169,7 @@ python3 scripts/sync_market_data.py --start 2024-01-01
 
 No MVP gratuito, essa rotina pode ser manual. Se o app ganhar uso recorrente, vale agendar a sincronizacao diaria em GitHub Actions, cron externo ou outro executor gratuito/conveniente.
 
-## Cuidados
+### Cuidados
 
 - Nunca commite `SUPABASE_DATABASE_URL` real.
 - Nao use o backend JSON como escolha principal em publicacao.

@@ -23,12 +23,34 @@ O MVP ativo é uma aplicação Streamlit com núcleo em Python puro:
 - cache local com lock por arquivo e escrita atômica; cache Postgres/Supabase com `UPSERT` transacional por série e data;
 - sincronização operacional: `scripts/sync_market_data.py` para preaquecer/atualizar o cache fora da requisição do usuário.
 
+A migração estática já possui uma primeira implementação em `public/`, com cálculo JavaScript puro, gráfico SVG, exportador de dataset, workflow diário e validação cruzada Python/JS. Até o deploy em Cloudflare Pages ser validado, o Streamlit continua sendo a referência funcional.
+
 Os scripts exploratórios antigos foram removidos da base ativa. As decisões úteis deles foram consolidadas em `README.md`, `docs/metodologia.md`, `docs/arquitetura.md` e neste arquivo. Não recrie notebook/script exploratório como dependência do MVP; implemente mudanças nos módulos de produção e cubra com testes.
+
+## Plano ativo de evolução
+
+Existe um plano sequencial para criar uma nova publicação web estática em Cloudflare Pages, com cálculo no navegador e dados CDI/USD pré-gerados diariamente:
+
+- referência principal: `PLANS.md`;
+- objetivo: reduzir custo operacional, processamento por acesso e dependência de uma aplicação Streamlit acordada;
+- regra central: a nova versão deve reproduzir o contrato financeiro do MVP Python antes de virar publicação principal.
+
+Quando a tarefa mencionar Cloudflare Pages, página estática, cálculo no navegador, exportação de dados, dataset JSON, GitHub Actions de atualização diária ou migração para fora do Streamlit, siga `PLANS.md` como roteiro. Implemente uma etapa por vez, valide o critério de avanço da etapa atual e não antecipe mudanças de etapas futuras sem necessidade clara.
 
 ## Arquitetura ativa
 
 ```text
 app.py
+PLANS.md
+public/
+  index.html
+  assets/
+    app.js
+    calculations.js
+    styles.css
+  data/
+    market-data.latest.json
+    market-data.manifest.json
 armadilha_cdi/
   config.py
   exceptions.py
@@ -53,6 +75,13 @@ Responsabilidades:
 - `armadilha_cdi/models.py`: dataclasses de troca entre camadas.
 - `armadilha_cdi/exceptions.py`: erros de domínio e dados de mercado.
 - `scripts/sync_market_data.py`: sincronização manual/agendável do cache.
+- `scripts/export_static_market_data.py`: geração e validação do dataset estático.
+- `scripts/validate_static_reference_cases.py`: comparação dos resultados Python e JavaScript em casos reais.
+- `public/assets/calculations.js`: regra financeira portada para JavaScript puro.
+- `public/assets/app.js`: UI estática, renderização de métricas e gráfico.
+- `.github/workflows/update-static-market-data.yml`: atualização diária do dataset estático.
+- `PLANS.md`: plano de migração para publicação estática em Cloudflare Pages, organizado em etapas testáveis.
+- `docs/archive/`: materiais históricos úteis que não fazem parte do fluxo operacional ativo.
 
 ## Regras de negócio que não devem mudar sem decisão explícita
 
@@ -104,6 +133,7 @@ Rodar testes:
 
 ```bash
 python3 -m unittest discover -s tests -v
+npm run test:js
 ```
 
 Rodar app:
@@ -116,6 +146,13 @@ Preaquecer/sincronizar cache:
 
 ```bash
 python3 scripts/sync_market_data.py --start 2020-01-01
+```
+
+Gerar e validar dataset estático:
+
+```bash
+python3 scripts/export_static_market_data.py --start 1994-07-01
+python3 scripts/validate_static_reference_cases.py
 ```
 
 Preaquecer/sincronizar cache Supabase:
@@ -142,16 +179,21 @@ git ls-files
 - Prefira mudar `armadilha_cdi/services/charts.py` quando a visualização precisar de novas séries derivadas.
 - Prefira mudar `scripts/sync_market_data.py` quando o fluxo operacional de preaquecer/atualizar cache mudar.
 - Mantenha `app.py` focado em interface; evite colocar regra financeira nele.
+- Para a migração estática, preserve o núcleo Python como fonte de verdade inicial e crie equivalência testável antes de portar comportamento para JavaScript.
+- Para datasets estáticos, não exponha segredos, não consulte o Banco Central durante a interação do usuário e valide o schema antes de publicar.
 - Não adicione dependências para resolver algo que a biblioteca padrão ou pandas já resolvem bem.
 - Preserve mensagens de erro claras para datas inválidas, valor inicial inválido e ausência de dados.
 - Ao alterar regra de cálculo, atualize `docs/metodologia.md`, `README.md` e os testes.
 - Ao alterar arquitetura ou responsabilidades, atualize `docs/arquitetura.md` e este arquivo.
+- Ao executar ou revisar etapas de `PLANS.md`, atualize o próprio plano quando uma decisão arquitetural for tomada ou uma etapa mudar de escopo.
 - Arquivos gerados como `cache/`, `__pycache__/`, `.pytest_cache/` e `.streamlit/` não devem ser versionados.
+- Controles locais de agente/editor, como `.agents/`, `.claude/`, `.vscode/` e `skills-lock.json`, ficam fora da base ativa salvo decisão explícita.
 
 ## Escopo futuro, mas fora do MVP atual
 
 - IPCA como série opcional no gráfico.
 - Inflação americana como camada adicional de poder de compra em USD.
+- Publicação estática em Cloudflare Pages conforme `PLANS.md`.
 - Endpoint HTTP fora do Streamlit.
 - Cache em storage de objetos ou serviço gerenciado diferente do Supabase/Postgres.
 

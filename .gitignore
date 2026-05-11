@@ -1,8 +1,12 @@
 __pycache__/
 .pytest_cache/
 .streamlit/
+.agents/
+.claude/
+.vscode/
 .venv/
 .env
+skills-lock.json
 .coverage
 dist/
 build/

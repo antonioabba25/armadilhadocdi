@@ -1,0 +1,12 @@
+[
+  {"label": "borda inicial do real", "start_date": "1994-07-01", "end_date": "1994-07-08", "initial_brl": 1000.0},
+  {"label": "cambio janeiro de 1999", "start_date": "1999-01-04", "end_date": "1999-01-15", "initial_brl": 1000.0},
+  {"label": "eleicao 2002", "start_date": "2002-10-01", "end_date": "2002-10-31", "initial_brl": 1000.0},
+  {"label": "crise 2008", "start_date": "2008-09-12", "end_date": "2008-10-15", "initial_brl": 1000.0},
+  {"label": "copa 2014", "start_date": "2014-06-12", "end_date": "2014-07-14", "initial_brl": 1000.0},
+  {"label": "inicio em feriado 2016", "start_date": "2016-01-01", "end_date": "2016-02-01", "initial_brl": 1000.0},
+  {"label": "pandemia 2020", "start_date": "2020-03-02", "end_date": "2020-04-01", "initial_brl": 1000.0},
+  {"label": "virada 2021 2022", "start_date": "2021-12-31", "end_date": "2022-01-10", "initial_brl": 1000.0},
+  {"label": "fim de semana 2024", "start_date": "2024-01-06", "end_date": "2024-01-09", "initial_brl": 1000.0},
+  {"label": "periodo recente 2025", "start_date": "2025-05-01", "end_date": "2025-05-12", "initial_brl": 1000.0}
+]

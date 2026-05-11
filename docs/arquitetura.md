@@ -56,12 +56,17 @@ O cache local e adequado para desenvolvimento e execucao local. Para publicacao,
 ### Sincronizacao operacional
 
 - `scripts/sync_market_data.py`
+- `scripts/export_static_market_data.py`
+- `.github/workflows/update-static-market-data.yml`
 
 Responsabilidades:
 
 - preaquecer ou atualizar o cache fora da requisicao do usuario;
 - permitir agendamento externo, por exemplo cron ou job da plataforma;
 - reduzir consultas ao Banco Central durante o uso interativo do Streamlit.
+- exportar `public/data/market-data.latest.json` e `public/data/market-data.manifest.json` para a publicacao estatica;
+- validar schema, cobertura e ausencia de texto com aparencia de segredo antes de publicar;
+- atualizar diariamente os dados estaticos por GitHub Actions.
 
 ### Regra de negocio
 
@@ -80,6 +85,7 @@ Responsabilidades:
 ### Series para visualizacao
 
 - `armadilha_cdi/services/charts.py`
+- `public/assets/calculations.js`
 
 Responsabilidades:
 
@@ -87,6 +93,26 @@ Responsabilidades:
 - preparar as curvas comparativas mostradas no Streamlit;
 - considerar apenas dias uteis presentes nas series oficiais;
 - manter a mesma logica economica do calculo analitico.
+- na publicacao estatica, gerar a serie do grafico no navegador a partir dos mesmos dados oficiais exportados.
+
+### Publicacao estatica
+
+- `public/index.html`
+- `public/assets/app.js`
+- `public/assets/calculations.js`
+- `public/assets/styles.css`
+- `public/data/market-data.latest.json`
+- `public/data/market-data.manifest.json`
+- `scripts/validate_static_reference_cases.py`
+
+Responsabilidades:
+
+- carregar o JSON estatico de mercado;
+- validar entradas no navegador;
+- executar a regra financeira em JavaScript puro;
+- renderizar resumo, avisos de fallback e grafico SVG responsivo;
+- exibir a data de ultima geracao e a cobertura publicada;
+- comparar resultados JavaScript contra o nucleo Python em periodos reais de referencia.
 
 ### Modelos e erros
 
@@ -109,6 +135,8 @@ Responsabilidades:
 
 Em operacao publicada, o fluxo preferencial e rodar `scripts/sync_market_data.py` de forma manual ou agendada antes do uso. Assim, o caminho interativo tende a ler dados ja sincronizados e so usa a sincronizacao sob demanda como fallback.
 
+Na publicacao estatica, o fluxo muda: o GitHub Actions roda testes Python e JavaScript, executa `scripts/export_static_market_data.py --start 1994-07-01`, valida os casos cruzados com `scripts/validate_static_reference_cases.py` e commita somente os arquivos de `public/data/` quando houver alteracao. A pagina em Cloudflare Pages serve `public/` sem processo Python ativo e sem chamadas ao Banco Central durante a interacao do usuario.
+
 Na publicacao com Supabase, a tabela padrao e `market_rates`, com chave primaria `(series, ref_date)`. O app cria essa tabela automaticamente ao iniciar o backend Postgres, mas a mesma definicao tambem pode ser criada manualmente em migracao SQL:
 
 ```sql
@@ -123,7 +151,7 @@ create table if not exists market_rates (
 
 A migracao versionada em `supabase/migrations/20260501000000_create_market_rates.sql` aplica a mesma estrutura em `public.market_rates`, habilita RLS e revoga acesso direto das roles `anon` e `authenticated` quando elas existem. O app usa a connection string Postgres server-side, nao a Data API publica.
 
-As recomendacoes do agente Supabase instalado foram aproveitadas no desenho operacional: conexao via pooler, `prepare_threshold=None` para compatibilidade com transaction pooling, chave primaria composta, identificadores simples em lowercase e `UPSERT` atomico para merge de pontos por serie/data.
+As recomendacoes externas de boas praticas Supabase foram aproveitadas no desenho operacional: conexao via pooler, `prepare_threshold=None` para compatibilidade com transaction pooling, chave primaria composta, identificadores simples em lowercase e `UPSERT` atomico para merge de pontos por serie/data. Os controles locais de agente que originaram essa referencia foram removidos da base ativa; a decisao fica registrada em `docs/archive/`.
 
 ## Regras centrais preservadas na arquitetura
 
@@ -133,6 +161,7 @@ As recomendacoes do agente Supabase instalado foram aproveitadas no desenho oper
 - cotacao USD/BRL com fallback de ate 15 dias para tras
 - metrica principal: variacao % em USD
 - notificacao explicita quando a cotacao usada nao coincide com a data solicitada
+- dataset estatico versionado, sem segredos e com cobertura visivel na interface
 
 ## Por que essa separacao importa
 
@@ -149,5 +178,5 @@ Esta estrutura foi pensada para suportar evolucoes sem quebrar o MVP:
 - entrada de novas series, como IPCA;
 - eventual comparacao com inflacao americana;
 - exposicao por API;
-- rotina agendada de sincronizacao diaria do backend Supabase;
+- rotina agendada de sincronizacao diaria do backend Supabase, se o Streamlit continuar publicado;
 - camada adicional de cache de leitura em memoria sobre o backend persistente, se houver necessidade.
