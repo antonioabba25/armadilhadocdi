@@ -2,7 +2,7 @@
 
 Este projeto tem dois caminhos operacionais:
 
-- publicacao estatica em Cloudflare Pages, recomendada para a superficie publica quando validada;
+- publicacao estatica em Cloudflare Pages, usada como superficie publica principal;
 - MVP Streamlit, mantido como referencia funcional e ferramenta local/admin.
 
 ## Publicacao estatica em Cloudflare Pages

@@ -5,6 +5,7 @@ Esta pasta guarda materiais que ajudam a entender decisoes anteriores do projeto
 ## Itens arquivados
 
 - `frontpage_formatacao.md`: registro de parametros de frontpage usado como apoio para uma avaliacao visual/redesign. A implementacao ativa continua em `app.py` e `armadilha_cdi/frontpage_texts.py`.
+- `plano-publicacao-estatica.md`: plano de migracao para Cloudflare Pages. Foi arquivado depois da publicacao estatica passar a ser a superficie publica principal.
 
 ## Controles removidos da base ativa
 

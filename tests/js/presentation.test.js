@@ -38,8 +38,8 @@ test("presentation separates BRL, exchange, and USD perspectives", () => {
 
   assert.deepEqual(Object.keys(presentation), ["brl", "exchange", "usd"]);
   assert.equal(presentation.brl.title, "Capital em BRL pelo CDI");
-  assert.equal(presentation.exchange.title, "Cambio USD/BRL");
-  assert.equal(presentation.usd.title, "Posicao equivalente em USD");
+  assert.equal(presentation.exchange.title, "Câmbio USD/BRL");
+  assert.equal(presentation.usd.title, "Posição equivalente em USD");
   assert.equal(getRow(presentation.brl, "Valor final em BRL com CDI").value, 1100);
   assert.equal(getRow(presentation.exchange, "PTAX venda final").value, 5.5);
   assert.equal(getRow(presentation.usd, "Valor final em BRL convertido para USD").value, 200);
@@ -65,5 +65,5 @@ test("presentation derives exchange variation and equivalent rates", () => {
   assertAlmostEqual(calculateUsdBrlVariationPercentage(result), 10);
   assertAlmostEqual(getRow(presentation.brl, "CDI equivalente mensal").value, 10);
   assertAlmostEqual(getRow(presentation.exchange, "USD/BRL equivalente mensal").value, 10);
-  assertAlmostEqual(getRow(presentation.usd, "Variacao equivalente mensal em USD").value, 0);
+  assertAlmostEqual(getRow(presentation.usd, "Variação equivalente mensal em USD").value, 0);
 });

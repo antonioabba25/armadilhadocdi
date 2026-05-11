@@ -86,7 +86,7 @@ export function validateInputs(startDate, endDate, initialBrl) {
   }
   if (startDate < EARLIEST_SUPPORTED_DATE) {
     throw new DomainValidationError(
-      "A data inicial deve ser em ou posterior a 01/07/1994, quando o real brasileiro entrou em circulacao."
+      "A data inicial deve ser em ou posterior a 01/07/1994, quando o real brasileiro entrou em circulação."
     );
   }
   if (endDate <= startDate) {
@@ -120,7 +120,7 @@ export class QuoteResolver {
       }
     }
     throw new DataUnavailableError(
-      "Nao foi encontrada cotacao USD/BRL suficiente para o periodo selecionado."
+      "Não foi encontrada cotação USD/BRL suficiente para o período selecionado."
     );
   }
 }
@@ -152,7 +152,7 @@ export class MarketDateResolver {
     }
 
     throw new DataUnavailableError(
-      `Nao foi encontrado dado de ${this.label} suficiente para o periodo selecionado.`
+      `Não foi encontrado dado de ${this.label} suficiente para o período selecionado.`
     );
   }
 }
@@ -172,7 +172,7 @@ export function resolveCdiPeriod(cdiRates, startDate, endDate) {
   const effectiveEndDate = resolver.lookup(endDate);
 
   if (effectiveEndDate <= effectiveStartDate) {
-    throw new DataUnavailableError("Nao ha dias uteis de CDI suficientes para o periodo informado.");
+    throw new DataUnavailableError("Não há dias úteis de CDI suficientes para o período informado.");
   }
 
   return [effectiveStartDate, effectiveEndDate];
@@ -194,7 +194,7 @@ export function calculateCdiFactor(cdiRates, startDate, endDate) {
   }
 
   if (windowRates.length === 0) {
-    throw new DataUnavailableError("Nao ha dados de CDI suficientes para o periodo informado.");
+    throw new DataUnavailableError("Não há dados de CDI suficientes para o período informado.");
   }
   return [factor, windowRates.length];
 }

@@ -1,5 +1,7 @@
 # Plano de Implementacao: Publicacao Estatica em Cloudflare Pages
 
+> Arquivado em maio de 2026 após a publicação estática passar a ser a superfície pública principal. Este arquivo permanece apenas como histórico de decisões e não é mais o roteiro ativo do projeto.
+
 Este plano descreve a migracao planejada para uma versao web estatica da aplicacao, usando Cloudflare Pages, calculo no navegador e dados CDI/USD pre-gerados diariamente.
 
 O objetivo nao e substituir imediatamente o MVP Streamlit. O objetivo e criar uma nova superficie publica, mais barata e mais estavel, preservando a leitura correta do produto:

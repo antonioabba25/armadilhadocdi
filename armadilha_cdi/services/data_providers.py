@@ -48,7 +48,7 @@ class BCBMarketDataProvider:
             raise MarketDataError(
                 "A data inicial deve ser em ou posterior a "
                 f"{EARLIEST_SUPPORTED_DATE.strftime('%d/%m/%Y')}, "
-                "quando o real brasileiro entrou em circulacao."
+                "quando o real brasileiro entrou em circulação."
             )
         if end_date <= start_date:
             raise MarketDataError("A data final deve ser maior que a data inicial.")
@@ -86,7 +86,7 @@ class BCBMarketDataProvider:
             )
 
         if not fresh and not cached:
-            raise MarketDataError("Nao foi possivel obter os dados de CDI do Banco Central.")
+            raise MarketDataError("Não foi possível obter os dados de CDI do Banco Central.")
 
         return self.cache_repository.merge("cdi.json", fresh)
 
@@ -112,7 +112,7 @@ class BCBMarketDataProvider:
             )
 
         if not fresh and not cached:
-            raise MarketDataError("Nao foi possivel obter as cotacoes USD/BRL do Banco Central.")
+            raise MarketDataError("Não foi possível obter as cotações USD/BRL do Banco Central.")
 
         return self.cache_repository.merge("usd.json", fresh)
 

@@ -10,7 +10,17 @@ Toda tarefa futura deve preservar essa leitura. O resultado principal é a compa
 
 ## Estado atual da base
 
-O MVP ativo é uma aplicação Streamlit com núcleo em Python puro:
+O produto público atual é a publicação estática em `public/`, preparada para Cloudflare Pages:
+
+- entrada: `data inicial`, `data final`, `valor inicial investido` em BRL;
+- dados: dataset JSON versionado em `public/data/`, com CDI diário do SGS/BCB série `12` e USD/BRL PTAX venda;
+- cálculo: JavaScript puro no navegador, sem consulta ao Banco Central durante a interação do usuário;
+- saída: análise em três perspectivas, separando capital em BRL pelo CDI, câmbio USD/BRL e posição equivalente em USD;
+- gráfico SVG comparativo com CDI acumulado, variação do USD/BRL e variação em USD;
+- manutenção: `.github/workflows/update-static-market-data.yml` atualiza diariamente o dataset estático;
+- validação cruzada: `scripts/validate_static_reference_cases.py` compara os resultados JavaScript com o núcleo Python.
+
+O Streamlit continua na base como referência funcional, ferramenta local/admin e implementação Python pura:
 
 - entrada: `data inicial`, `data final`, `valor inicial investido` em BRL;
 - dados: CDI diário do SGS/BCB, série `12`;
@@ -23,30 +33,24 @@ O MVP ativo é uma aplicação Streamlit com núcleo em Python puro:
 - cache local com lock por arquivo e escrita atômica; cache Postgres/Supabase com `UPSERT` transacional por série e data;
 - sincronização operacional: `scripts/sync_market_data.py` para preaquecer/atualizar o cache fora da requisição do usuário.
 
-A migração estática já possui uma primeira implementação em `public/`, com cálculo JavaScript puro, gráfico SVG, exportador de dataset, workflow diário e validação cruzada Python/JS. Até o deploy em Cloudflare Pages ser validado, o Streamlit continua sendo a referência funcional.
-
 Os scripts exploratórios antigos foram removidos da base ativa. As decisões úteis deles foram consolidadas em `README.md`, `docs/metodologia.md`, `docs/arquitetura.md` e neste arquivo. Não recrie notebook/script exploratório como dependência do MVP; implemente mudanças nos módulos de produção e cubra com testes.
 
-## Plano ativo de evolução
+## Publicação estática concluída
 
-Existe um plano sequencial para criar uma nova publicação web estática em Cloudflare Pages, com cálculo no navegador e dados CDI/USD pré-gerados diariamente:
+O plano de migração para Cloudflare Pages foi concluído e arquivado em `docs/archive/plano-publicacao-estatica.md`.
 
-- referência principal: `PLANS.md`;
-- objetivo: reduzir custo operacional, processamento por acesso e dependência de uma aplicação Streamlit acordada;
-- regra central: a nova versão deve reproduzir o contrato financeiro do MVP Python antes de virar publicação principal.
-
-Quando a tarefa mencionar Cloudflare Pages, página estática, cálculo no navegador, exportação de dados, dataset JSON, GitHub Actions de atualização diária ou migração para fora do Streamlit, siga `PLANS.md` como roteiro. Implemente uma etapa por vez, valide o critério de avanço da etapa atual e não antecipe mudanças de etapas futuras sem necessidade clara.
+Quando a tarefa mencionar Cloudflare Pages, página estática, cálculo no navegador, exportação de dados, dataset JSON ou GitHub Actions de atualização diária, trate `public/` como superfície principal e preserve a equivalência com `armadilha_cdi/services/calculations.py`. Consulte o plano arquivado apenas como histórico de decisões, não como roteiro ativo.
 
 ## Arquitetura ativa
 
 ```text
 app.py
-PLANS.md
 public/
   index.html
   assets/
     app.js
     calculations.js
+    presentation.js
     styles.css
   data/
     market-data.latest.json
@@ -78,9 +82,10 @@ Responsabilidades:
 - `scripts/export_static_market_data.py`: geração e validação do dataset estático.
 - `scripts/validate_static_reference_cases.py`: comparação dos resultados Python e JavaScript em casos reais.
 - `public/assets/calculations.js`: regra financeira portada para JavaScript puro.
-- `public/assets/app.js`: UI estática, renderização de métricas e gráfico.
+- `public/assets/presentation.js`: derivados de apresentação para BRL, USD/BRL e posição em USD.
+- `public/assets/app.js`: UI estática, renderização da análise e gráfico.
 - `.github/workflows/update-static-market-data.yml`: atualização diária do dataset estático.
-- `PLANS.md`: plano de migração para publicação estática em Cloudflare Pages, organizado em etapas testáveis.
+- `docs/archive/plano-publicacao-estatica.md`: plano histórico da migração para Cloudflare Pages.
 - `docs/archive/`: materiais históricos úteis que não fazem parte do fluxo operacional ativo.
 
 ## Regras de negócio que não devem mudar sem decisão explícita
@@ -179,13 +184,12 @@ git ls-files
 - Prefira mudar `armadilha_cdi/services/charts.py` quando a visualização precisar de novas séries derivadas.
 - Prefira mudar `scripts/sync_market_data.py` quando o fluxo operacional de preaquecer/atualizar cache mudar.
 - Mantenha `app.py` focado em interface; evite colocar regra financeira nele.
-- Para a migração estática, preserve o núcleo Python como fonte de verdade inicial e crie equivalência testável antes de portar comportamento para JavaScript.
+- Para a publicação estática, preserve a equivalência testável entre o núcleo Python e o cálculo JavaScript.
 - Para datasets estáticos, não exponha segredos, não consulte o Banco Central durante a interação do usuário e valide o schema antes de publicar.
 - Não adicione dependências para resolver algo que a biblioteca padrão ou pandas já resolvem bem.
 - Preserve mensagens de erro claras para datas inválidas, valor inicial inválido e ausência de dados.
 - Ao alterar regra de cálculo, atualize `docs/metodologia.md`, `README.md` e os testes.
 - Ao alterar arquitetura ou responsabilidades, atualize `docs/arquitetura.md` e este arquivo.
-- Ao executar ou revisar etapas de `PLANS.md`, atualize o próprio plano quando uma decisão arquitetural for tomada ou uma etapa mudar de escopo.
 - Arquivos gerados como `cache/`, `__pycache__/`, `.pytest_cache/` e `.streamlit/` não devem ser versionados.
 - Controles locais de agente/editor, como `.agents/`, `.claude/`, `.vscode/` e `skills-lock.json`, ficam fora da base ativa salvo decisão explícita.
 
@@ -193,7 +197,6 @@ git ls-files
 
 - IPCA como série opcional no gráfico.
 - Inflação americana como camada adicional de poder de compra em USD.
-- Publicação estática em Cloudflare Pages conforme `PLANS.md`.
 - Endpoint HTTP fora do Streamlit.
 - Cache em storage de objetos ou serviço gerenciado diferente do Supabase/Postgres.
 

@@ -17,7 +17,7 @@ export function buildResultPresentation(result) {
       rows: [
         { label: "Valor inicial em BRL", value: result.initial_brl, format: "brl" },
         { label: "Valor final em BRL com CDI", value: result.final_brl, format: "brl" },
-        { label: "CDI acumulado no periodo", value: result.cdi_percentage, format: "percent" },
+        { label: "CDI acumulado no período", value: result.cdi_percentage, format: "percent" },
         {
           label: "CDI equivalente mensal",
           value: calculateEquivalentRatePercentage(
@@ -36,16 +36,16 @@ export function buildResultPresentation(result) {
           ),
           format: "percent"
         },
-        { label: "Dias uteis de CDI usados", value: result.cdi_days_used, format: "integer" }
+        { label: "Dias úteis de CDI usados", value: result.cdi_days_used, format: "integer" }
       ]
     },
     exchange: {
-      title: "Cambio USD/BRL",
+      title: "Câmbio USD/BRL",
       rows: [
         { label: "PTAX venda inicial", value: result.initial_usdbrl, format: "quote" },
         { label: "PTAX venda final", value: result.final_usdbrl, format: "quote" },
         {
-          label: "Variacao acumulada do USD/BRL",
+          label: "Variação acumulada do USD/BRL",
           value: usdBrlVariationPercentage,
           format: "percent"
         },
@@ -72,17 +72,17 @@ export function buildResultPresentation(result) {
       ]
     },
     usd: {
-      title: "Posicao equivalente em USD",
+      title: "Posição equivalente em USD",
       rows: [
         { label: "Valor inicial convertido para USD", value: result.initial_usd, format: "usd" },
         { label: "Valor final em BRL convertido para USD", value: result.final_usd_with_cdi, format: "usd" },
         {
-          label: "Variacao acumulada da posicao em USD",
+          label: "Variação acumulada da posição em USD",
           value: result.real_usd_return_percentage,
           format: "percent"
         },
         {
-          label: "Variacao equivalente mensal em USD",
+          label: "Variação equivalente mensal em USD",
           value: calculateEquivalentRatePercentage(
             result.real_usd_return_percentage,
             result.cdi_days_used,
@@ -91,7 +91,7 @@ export function buildResultPresentation(result) {
           format: "percent"
         },
         {
-          label: "Variacao equivalente anual em USD",
+          label: "Variação equivalente anual em USD",
           value: calculateEquivalentRatePercentage(
             result.real_usd_return_percentage,
             result.cdi_days_used,

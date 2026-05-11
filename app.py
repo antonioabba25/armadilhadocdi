@@ -58,7 +58,16 @@ def format_brl(value: float) -> str:
 
 
 def format_usd(value: float) -> str:
-    return f"US$ {value:,.2f}"
+    return f"US$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def format_decimal(value: float, digits: int = 2) -> str:
+    return (
+        f"{value:,.{digits}f}"
+        .replace(",", "X")
+        .replace(".", ",")
+        .replace("X", ".")
+    )
 
 
 def format_percent(value: float) -> str:
@@ -791,13 +800,13 @@ def render_summary(result: CalculationResult) -> None:
         render_metric_card(
             copy.METRIC_INITIAL_USD,
             format_usd(result.initial_usd),
-            detail=f"PTAX {result.initial_usdbrl:,.4f}",
+            detail=f"PTAX {format_decimal(result.initial_usdbrl, 4)}",
         )
     with col5:
         render_metric_card(
             copy.METRIC_FINAL_USD_WITH_CDI,
             format_usd(result.final_usd_with_cdi),
-            detail=f"Variacao % em USD {format_percent(result.real_usd_return_percentage)}",
+            detail=f"Variação % em USD {format_percent(result.real_usd_return_percentage)}",
             highlight=True,
             tone=real_usd_tone,
         )
@@ -807,7 +816,7 @@ def render_summary(result: CalculationResult) -> None:
             format_percent(usd_variation),
             detail=(
                 f"{equivalent_rate_detail(usd_variation, result.cdi_days_used)}\n"
-                f"{result.initial_usdbrl:,.4f} -> {result.final_usdbrl:,.4f}"
+                f"{format_decimal(result.initial_usdbrl, 4)} → {format_decimal(result.final_usdbrl, 4)}"
             ),
             tone=usd_variation_tone,
         )
@@ -852,8 +861,8 @@ def technical_table_dataframe(result: CalculationResult) -> pd.DataFrame:
             copy.TECHNICAL_TABLE_VALUE_COLUMN: [
                 result.period_label,
                 result.effective_period_label,
-                f"{result.initial_usdbrl:,.4f}",
-                f"{result.final_usdbrl:,.4f}",
+                format_decimal(result.initial_usdbrl, 4),
+                format_decimal(result.final_usdbrl, 4),
                 format_percent(usd_variation_percentage(result)),
                 format_percentage_points(cdi_vs_usd_gap_percentage_points(result)),
                 str(result.cdi_days_used),
@@ -897,7 +906,7 @@ def chart_long_dataframe(chart_df: pd.DataFrame) -> pd.DataFrame:
     return plot_df.melt(
         id_vars=copy.CHART_DATE,
         value_vars=visible_columns,
-        var_name="Serie",
+        var_name="Série",
         value_name="Percentual",
     )
 
@@ -911,7 +920,7 @@ def render_chart_panel(chart_df: pd.DataFrame) -> None:
                 <div class="cdi-legend">
                     <span class="cdi-legend-item"><span class="cdi-dot cdi-dot-cdi"></span>CDI</span>
                     <span class="cdi-legend-item"><span class="cdi-dot cdi-dot-usd"></span>USD/BRL</span>
-                    <span class="cdi-legend-item"><span class="cdi-dot cdi-dot-real"></span>Variacao % em USD</span>
+                    <span class="cdi-legend-item"><span class="cdi-dot cdi-dot-real"></span>Variação % em USD</span>
                 </div>
             </div>
         </div>
@@ -946,7 +955,7 @@ def render_chart_panel(chart_df: pd.DataFrame) -> None:
                     },
                 },
                 "color": {
-                    "field": "Serie",
+                    "field": "Série",
                     "type": "nominal",
                     "scale": {
                         "domain": [
@@ -960,7 +969,7 @@ def render_chart_panel(chart_df: pd.DataFrame) -> None:
                 },
                 "tooltip": [
                     {"field": copy.CHART_DATE, "type": "temporal", "title": "Data"},
-                    {"field": "Serie", "type": "nominal", "title": "Série"},
+                    {"field": "Série", "type": "nominal", "title": "Série"},
                     {
                         "field": "Percentual",
                         "type": "quantitative",
@@ -1070,7 +1079,7 @@ def main() -> None:
         render_status_message(str(exc), "negative")
         render_footer()
     except Exception:  # pragma: no cover - safeguard for UI
-        logger.exception("Erro inesperado ao renderizar a aplicacao.")
+        logger.exception("Erro inesperado ao renderizar a aplicação.")
         render_status_message(copy.UNEXPECTED_ERROR_MESSAGE, "negative")
         render_footer()
 

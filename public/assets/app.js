@@ -39,6 +39,10 @@ const numberFormatter = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 2
 });
 
+const integerFormatter = new Intl.NumberFormat("pt-BR", {
+  maximumFractionDigits: 0
+});
+
 const percentFormatter = new Intl.NumberFormat("pt-BR", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -70,7 +74,7 @@ function addDays(isoDate, days) {
 
 function validateDataset(dataset) {
   if (!dataset || dataset.schema_version !== 1) {
-    throw new Error("Dataset estatico em versao invalida.");
+    throw new Error("Dataset estático em versão inválida.");
   }
   for (const key of ["coverage", "limits", "cdi_rates", "usd_rates"]) {
     if (!dataset[key] || typeof dataset[key] !== "object") {
@@ -78,7 +82,7 @@ function validateDataset(dataset) {
     }
   }
   if (Object.keys(dataset.cdi_rates).length === 0 || Object.keys(dataset.usd_rates).length === 0) {
-    throw new Error("Dataset estatico sem dados oficiais suficientes.");
+    throw new Error("Dataset estático sem dados oficiais suficientes.");
   }
 }
 
@@ -96,10 +100,10 @@ function setInitialFormValues(dataset) {
 }
 
 function updateDatasetMetadata(dataset) {
-  dataStatus.textContent = `Dados ate ${formatDate(dataset.coverage.end_date)}`;
+  dataStatus.textContent = `Dados até ${formatDate(dataset.coverage.end_date)}`;
   generatedAt.textContent = formatGeneratedAt(dataset.generated_at);
   coverage.textContent = `${formatDate(dataset.coverage.start_date)} a ${formatDate(dataset.coverage.end_date)}`;
-  counts.textContent = `${Object.keys(dataset.cdi_rates).length} CDI, ${Object.keys(dataset.usd_rates).length} USD/BRL`;
+  counts.textContent = `${integerFormatter.format(Object.keys(dataset.cdi_rates).length)} CDI, ${integerFormatter.format(Object.keys(dataset.usd_rates).length)} USD/BRL`;
 }
 
 function formatPresentationValue(row) {
@@ -116,7 +120,7 @@ function formatPresentationValue(row) {
     return numberFormatter.format(row.value);
   }
   if (row.format === "integer") {
-    return String(row.value);
+    return integerFormatter.format(row.value);
   }
   if (row.format === "date") {
     return formatDate(row.value);
@@ -150,7 +154,7 @@ function renderResult(result) {
   metricsGrid.replaceChildren();
   fallbackNotice.className = "notice";
 
-  resultTitle.textContent = "BRL, cambio e USD em perspectiva";
+  resultTitle.textContent = "BRL, câmbio e USD em perspectiva";
 
   const presentation = buildResultPresentation(result);
   renderPresentationSection(presentation.brl, "brl");
@@ -160,7 +164,7 @@ function renderResult(result) {
   const notices = [];
   if (result.effective_start_date !== result.start_date || result.effective_end_date !== result.end_date) {
     notices.push(
-      `Periodo efetivo de mercado: ${formatDate(result.effective_start_date)} a ${formatDate(result.effective_end_date)}.`
+      `Período efetivo de mercado: ${formatDate(result.effective_start_date)} a ${formatDate(result.effective_end_date)}.`
     );
   }
   if (result.initial_fx_date !== result.effective_start_date) {
@@ -173,7 +177,7 @@ function renderResult(result) {
 }
 
 function renderError(error) {
-  resultTitle.textContent = "Nao foi possivel calcular";
+  resultTitle.textContent = "Não foi possível calcular";
   metricsGrid.replaceChildren();
   fallbackNotice.className = "notice error";
   fallbackNotice.textContent = error.message || "Erro inesperado.";
@@ -191,7 +195,7 @@ function renderChart(rows) {
   chart.replaceChildren();
   if (rows.length < 2) {
     chartEmpty.classList.remove("hidden");
-    chartEmpty.textContent = "Nao ha pontos suficientes para o grafico.";
+    chartEmpty.textContent = "Não há pontos suficientes para o gráfico.";
     return;
   }
 
@@ -291,7 +295,7 @@ function svgElement(tagName, attributes) {
 
 function runAnalysis() {
   if (!marketData) {
-    throw new Error("Dataset ainda nao foi carregado.");
+      throw new Error("Dataset ainda não foi carregado.");
   }
   const startDate = startInput.value;
   const endDate = endInput.value;
@@ -335,7 +339,7 @@ async function loadDataset() {
   try {
     const response = await fetch(DATASET_URL, { cache: "no-cache" });
     if (!response.ok) {
-      throw new Error("Dataset estatico nao encontrado.");
+      throw new Error("Dataset estático não encontrado.");
     }
     const dataset = await response.json();
     validateDataset(dataset);
@@ -344,7 +348,7 @@ async function loadDataset() {
     updateDatasetMetadata(dataset);
     runAnalysis();
   } catch (error) {
-    dataStatus.textContent = "Dados indisponiveis";
+    dataStatus.textContent = "Dados indisponíveis";
     generatedAt.textContent = "--";
     coverage.textContent = "--";
     counts.textContent = "--";

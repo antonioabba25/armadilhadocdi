@@ -20,7 +20,7 @@ def validate_inputs(start_date: date, end_date: date, initial_brl: float) -> Non
         raise DomainValidationError(
             "A data inicial deve ser em ou posterior a "
             f"{EARLIEST_SUPPORTED_DATE.strftime('%d/%m/%Y')}, "
-            "quando o real brasileiro entrou em circulacao."
+            "quando o real brasileiro entrou em circulação."
         )
     if end_date <= start_date:
         raise DomainValidationError("A data final deve ser maior que a data inicial.")
@@ -64,7 +64,7 @@ class QuoteResolver:
                 )
 
         raise DataUnavailableError(
-            "Nao foi encontrada cotacao USD/BRL suficiente para o periodo selecionado."
+            "Não foi encontrada cotação USD/BRL suficiente para o período selecionado."
         )
 
 
@@ -114,7 +114,7 @@ class MarketDateResolver:
                 return effective_date
 
         raise DataUnavailableError(
-            f"Nao foi encontrado dado de {self.label} suficiente para o periodo selecionado."
+            f"Não foi encontrado dado de {self.label} suficiente para o período selecionado."
         )
 
 
@@ -143,7 +143,7 @@ def resolve_cdi_period(
     effective_end_date = resolver.lookup(end_date)
 
     if effective_end_date <= effective_start_date:
-        raise DataUnavailableError("Nao ha dias uteis de CDI suficientes para o periodo informado.")
+        raise DataUnavailableError("Não há dias úteis de CDI suficientes para o período informado.")
 
     return effective_start_date, effective_end_date
 
@@ -174,7 +174,7 @@ def calculate_cdi_factor(
     days_used = len(window_rates)
 
     if days_used == 0:
-        raise DataUnavailableError("Nao ha dados de CDI suficientes para o periodo informado.")
+        raise DataUnavailableError("Não há dados de CDI suficientes para o período informado.")
 
     return factor, days_used
 

@@ -22,6 +22,6 @@ test("static UI does not present a practical conclusion before IPCA support", ()
 });
 
 test("static UI introduces the result as period analysis", () => {
-  assert.equal(indexHtml.includes("Analise do periodo"), true);
-  assert.equal(appJs.includes("BRL, cambio e USD em perspectiva"), true);
+  assert.equal(indexHtml.includes("Análise do período"), true);
+  assert.equal(appJs.includes("BRL, câmbio e USD em perspectiva"), true);
 });
