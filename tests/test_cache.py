@@ -4,16 +4,13 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
-import sys
 import tempfile
-import types
 import unittest
 from unittest import mock
 
 from armadilha_cdi.services.cache import (
     CacheConfigurationError,
     JsonFileCache,
-    PostgresTimeSeriesCache,
     build_cache_repository,
 )
 
@@ -82,53 +79,6 @@ class CacheFactoryTests(unittest.TestCase):
     def test_build_cache_repository_rejects_unknown_backend(self) -> None:
         with self.assertRaises(CacheConfigurationError):
             build_cache_repository(backend="memory")
-
-    def test_build_cache_repository_requires_database_url_for_supabase(self) -> None:
-        with mock.patch.dict(
-            os.environ,
-            {"SUPABASE_DATABASE_URL": "", "DATABASE_URL": ""},
-        ):
-            with self.assertRaises(CacheConfigurationError):
-                build_cache_repository(backend="supabase", database_url="")
-
-
-class PostgresTimeSeriesCacheTests(unittest.TestCase):
-    def test_rejects_unsafe_table_name_before_connecting(self) -> None:
-        with self.assertRaises(CacheConfigurationError):
-            PostgresTimeSeriesCache(
-                database_url="postgresql://example",
-                table_name="market_rates; drop table market_rates",
-                ensure_schema=False,
-            )
-
-    def test_normalize_data_keeps_only_valid_dates_and_numbers(self) -> None:
-        self.assertEqual(
-            PostgresTimeSeriesCache._normalize_data(
-                {
-                    "2024-01-01": "1.5",
-                    "invalid": 2.0,
-                    "2024-01-02": "not-a-number",
-                }
-            ),
-            {"2024-01-01": 1.5},
-        )
-
-    def test_connect_uses_supabase_pooler_safe_options(self) -> None:
-        fake_psycopg = types.SimpleNamespace(connect=mock.Mock())
-
-        with mock.patch.dict(sys.modules, {"psycopg": fake_psycopg}):
-            cache = PostgresTimeSeriesCache(
-                database_url="postgresql://example",
-                ensure_schema=False,
-            )
-            cache._connect()
-
-        fake_psycopg.connect.assert_called_once_with(
-            "postgresql://example",
-            application_name="armadilha_cdi",
-            connect_timeout=10,
-            prepare_threshold=None,
-        )
 
 
 if __name__ == "__main__":

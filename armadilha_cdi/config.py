@@ -5,7 +5,6 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CACHE_DIR = PROJECT_ROOT / "cache"
-DEFAULT_SUPABASE_CACHE_TABLE = "market_rates"
 
 DATE_STORAGE_FORMAT = "%Y-%m-%d"
 DATE_DISPLAY_FORMAT = "%d/%m/%Y"

@@ -55,7 +55,7 @@ valor_final_brl = valor_inicial_brl * fator_acumulado
 cdi_percentual = (fator_acumulado - 1) * 100
 ```
 
-Para contextualizar os percentuais de periodo exibidos na frontpage, o app calcula taxas equivalentes anual e mensal:
+Para contextualizar os percentuais de periodo exibidos na pagina estatica, o app calcula taxas equivalentes anual e mensal:
 
 ```python
 taxa_equivalente = ((1 + percentual_periodo / 100) ** (dias_equivalentes / dias_uteis) - 1) * 100
@@ -81,17 +81,15 @@ Essa decisao evita duas falhas comuns:
 
 ## Cache e sincronizacao
 
-O cache nao substitui a fonte oficial. Ele e uma camada de sincronizacao: o app consulta primeiro os dados persistidos, busca no Banco Central apenas quando a janela ainda nao esta coberta e grava os novos pontos para reutilizacao.
+O cache nao substitui a fonte oficial. Ele e uma camada de sincronizacao: os scripts consultam primeiro os dados persistidos, buscam no Banco Central apenas quando a janela ainda nao esta coberta e gravam os novos pontos para reutilizacao.
 
 Na serie diaria do CDI, a busca no SGS/BCB e dividida em janelas menores com uma pequena pausa entre requisicoes. Esse fatiamento e apenas operacional: ele contorna limites da API em periodos longos e depois une os pontos pela data oficial, sem mudar a formula de acumulacao.
 
 Algumas janelas curtas podem nao conter nenhuma observacao oficial, como `01/07/1994` a `03/07/1994` na serie 12. Quando o SGS sinaliza uma dessas janelas como nao encontrada, o app trata a resposta como janela vazia e continua a sincronizacao das demais bordas.
 
-Para publicacao, o caminho preferencial e preaquecer ou atualizar esse cache por `scripts/sync_market_data.py`, fora da interacao do usuario. O app ainda consegue sincronizar sob demanda quando faltar uma janela, mas essa deve ser uma contingencia, nao a rotina principal de operacao.
+Para publicacao, o caminho e atualizar o dataset estatico por `scripts/export_static_market_data.py`, fora da interacao do usuario. A pagina publicada nunca consulta o Banco Central diretamente.
 
-Em desenvolvimento, o backend padrao continua sendo JSON local em `cache/`. Ele usa lock por arquivo e escrita atomica para reduzir risco de corrupcao em acessos concorrentes.
-
-Em publicacao, o backend recomendado e Supabase/Postgres. Nesse modo, cada ponto de mercado e gravado por serie e data, com `UPSERT` transacional, evitando sobrescrever um arquivo JSON inteiro quando mais de uma sessao tenta sincronizar dados proximos no tempo.
+O cache operacional e JSON local em `cache/`. Ele usa lock por arquivo e escrita atomica para reduzir risco de corrupcao em acessos concorrentes.
 
 ## Etapa 3: conversao do capital para dolar
 

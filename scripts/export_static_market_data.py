@@ -15,7 +15,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from armadilha_cdi.config import (  # noqa: E402
     DEFAULT_CACHE_DIR,
-    DEFAULT_SUPABASE_CACHE_TABLE,
     EARLIEST_SUPPORTED_DATE,
     MAX_MARKET_DATE_FALLBACK_DAYS,
     MAX_USD_FALLBACK_DAYS,
@@ -269,22 +268,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--cache-backend",
-        choices=("json", "supabase", "postgres", "postgresql"),
+        choices=("json", "file", "local"),
         default=None,
         help="Backend do cache. Padrao: MARKET_DATA_CACHE_BACKEND ou json.",
-    )
-    parser.add_argument(
-        "--database-url",
-        default=None,
-        help="URL Postgres do Supabase. Padrao: SUPABASE_DATABASE_URL ou DATABASE_URL.",
-    )
-    parser.add_argument(
-        "--cache-table",
-        default=None,
-        help=(
-            "Tabela usada no Postgres. Padrao: SUPABASE_CACHE_TABLE ou "
-            f"{DEFAULT_SUPABASE_CACHE_TABLE}."
-        ),
     )
     return parser
 
@@ -303,8 +289,6 @@ def main() -> None:
         cache_repository = build_cache_repository(
             cache_dir=args.cache_dir,
             backend=args.cache_backend,
-            database_url=args.database_url,
-            table_name=args.cache_table,
         )
     except CacheConfigurationError as exc:
         raise SystemExit(str(exc)) from exc
