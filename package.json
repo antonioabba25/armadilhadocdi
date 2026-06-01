@@ -3,6 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:js": "node --test tests/js/*.test.js"
+    "test:js": "node --test tests/js/*.test.js",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.96.0"
   }
 }
