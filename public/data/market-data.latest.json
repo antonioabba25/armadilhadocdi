@@ -8007,19 +8007,20 @@
     "2026-05-26": 0.0534,
     "2026-05-27": 0.0534,
     "2026-05-28": 0.0534,
-    "2026-05-29": 0.0534
+    "2026-05-29": 0.0534,
+    "2026-06-01": 0.0534
   },
   "coverage": {
-    "cdi_end_date": "2026-05-29",
+    "cdi_end_date": "2026-06-01",
     "cdi_start_date": "1994-07-04",
     "end_date": "2026-05-27",
-    "requested_end_date": "2026-06-01",
+    "requested_end_date": "2026-06-03",
     "requested_start_date": "1994-07-01",
     "start_date": "1994-07-01",
     "usd_end_date": "2026-05-27",
     "usd_start_date": "1994-07-01"
   },
-  "generated_at": "2026-06-01T23:50:02Z",
+  "generated_at": "2026-06-03T00:10:10Z",
   "limits": {
     "earliest_supported_date": "1994-07-01",
     "max_market_date_fallback_days": 15,
