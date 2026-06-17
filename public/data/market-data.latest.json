@@ -8023,13 +8023,13 @@
     "cdi_end_date": "2026-06-15",
     "cdi_start_date": "1994-07-04",
     "end_date": "2026-06-12",
-    "requested_end_date": "2026-06-16",
+    "requested_end_date": "2026-06-17",
     "requested_start_date": "1994-07-01",
     "start_date": "1994-07-01",
     "usd_end_date": "2026-06-12",
     "usd_start_date": "1994-07-01"
   },
-  "generated_at": "2026-06-16T23:55:14Z",
+  "generated_at": "2026-06-17T23:56:24Z",
   "limits": {
     "earliest_supported_date": "1994-07-01",
     "max_market_date_fallback_days": 15,
