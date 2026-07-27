@@ -1,13 +1,13 @@
 {
   "counts": {
-    "cdi_rates": 8046,
+    "cdi_rates": 8047,
     "usd_rates": 8038
   },
   "coverage": {
     "end_date": "2026-07-15",
     "start_date": "1994-07-01"
   },
-  "generated_at": "2026-07-24T23:31:19Z",
+  "generated_at": "2026-07-27T23:33:29Z",
   "latest": "market-data.latest.json",
   "schema_version": 1
 }
