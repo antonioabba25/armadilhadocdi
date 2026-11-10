@@ -1,3 +1,5 @@
+> Arquivado em 09/11/2026. O contrato vigente foi consolidado em [metodologia](../metodologia.md#contrato-de-calculo). Este texto registra a transicao para a versao estatica.
+
 # Contrato de Calculo da Versao Estatica
 
 Este contrato congela o comportamento que a publicacao estatica deve reproduzir antes de virar a superficie publica principal. A referencia inicial continua sendo o nucleo Python em `armadilha_cdi/services/calculations.py`.

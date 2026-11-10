@@ -2,13 +2,15 @@
 
 O dataset estatico transporta dados oficiais pre-gerados para o navegador. Ele nao contem segredos e nao deve depender de consulta ao Banco Central durante a interacao do usuario.
 
+O [exportador](../scripts/export_static_market_data.py) produz o dataset e o manifesto; a [UI](../public/assets/app.js) carrega diretamente o dataset. Operacao e diagnostico: [publicacao](publicacao.md).
+
 ## Decisao de Granularidade
 
 A versao inicial usa arquivo unico. O historico diario de CDI e PTAX desde 1994 cabe em um JSON simples e evita complexidade prematura no carregamento. A decisao deve ser reavaliada se o arquivo comprimido deixar de ser confortavel para primeiro carregamento em rede comum.
 
 ## `public/data/market-data.latest.json`
 
-Schema versionado:
+Schema versionado. O JSON abaixo e um recorte ilustrativo, nao um dataset completo nem o estado atual da publicacao:
 
 ```json
 {
@@ -72,7 +74,7 @@ Campos:
 }
 ```
 
-O manifesto existe para a pagina e para operacao conferirem rapidamente qual dataset esta publicado sem carregar outros metadados.
+O manifesto permite a operadores conferir rapidamente cobertura e contagens. A UI atual nao o consulta. Os valores de exemplo nao representam a cobertura atual.
 
 ## Validacoes Obrigatorias
 
@@ -83,3 +85,12 @@ O manifesto existe para a pagina e para operacao conferirem rapidamente qual dat
 - A cobertura deve respeitar `1994-07-01` como minimo.
 - `coverage.end_date` nao pode ultrapassar os limites reais das series.
 - O arquivo publicado nao pode conter URLs de credenciais, tokens ou strings de conexao.
+
+
+## Frescor e cobertura
+
+`generated_at` e o instante de exportacao, nao a data da ultima observacao do BCB. `coverage.requested_end_date` registra o limite pedido, nao garante disponibilidade ate ele. O exportador calcula o fim comum como o menor entre o fim do CDI, o fim da PTAX e o fim solicitado.
+
+A UI usa `coverage.end_date` como fim padrao e para o indicador de cobertura, mas permite entrada ate `coverage.requested_end_date` quando presente; as regras de fallback continuam limitando o calculo. Confira as datas efetivas antes de interpretar resultados apos o fim comum.
+
+Para diagnosticar uma publicacao antiga, comece pelo manifesto e depois examine os limites por serie no dataset. Contagens ou geracao recentes, isoladamente, nao comprovam dados recentes. O procedimento esta em [publicacao](publicacao.md#diagnostico-e-recuperacao).

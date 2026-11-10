@@ -1,4 +1,6 @@
-# Metodologia de Calculo
+# Metodologia e Contrato de Calculo
+
+Documento principal das regras financeiras e do contrato Python/JavaScript. Consulte [arquitetura](arquitetura.md) para responsabilidades e [referencias](referencias.md) para fontes oficiais.
 
 ## Visao geral
 
@@ -29,7 +31,7 @@ A regra temporal consolidada para o app e:
 
 Na pratica, isso significa:
 
-- se a data solicitada nao tiver dado oficial, o app usa a ultima data util disponivel na serie CDI;
+- se a data solicitada nao tiver dado oficial, o app usa a ultima data util disponivel na serie CDI, dentro de 15 dias (`MAX_MARKET_DATE_FALLBACK_DAYS`);
 - na borda inicial do real, se nao houver CDI anterior permitido e a primeira observacao oficial estiver dentro da tolerancia de calendario, o app usa essa primeira data oficial;
 - a taxa de CDI da data inicial efetiva entra no acumulo;
 - a data final efetiva funciona como limite superior exclusivo;
@@ -78,18 +80,6 @@ Essa decisao evita duas falhas comuns:
 
 - quebrar o calculo em datas sem cotacao;
 - usar uma cotacao antiga demais de forma silenciosa.
-
-## Cache e sincronizacao
-
-O cache nao substitui a fonte oficial. Ele e uma camada de sincronizacao: os scripts consultam primeiro os dados persistidos, buscam no Banco Central apenas quando a janela ainda nao esta coberta e gravam os novos pontos para reutilizacao.
-
-Na serie diaria do CDI, a busca no SGS/BCB e dividida em janelas menores com uma pequena pausa entre requisicoes. Esse fatiamento e apenas operacional: ele contorna limites da API em periodos longos e depois une os pontos pela data oficial, sem mudar a formula de acumulacao.
-
-Algumas janelas curtas podem nao conter nenhuma observacao oficial, como `01/07/1994` a `03/07/1994` na serie 12. Quando o SGS sinaliza uma dessas janelas como nao encontrada, o app trata a resposta como janela vazia e continua a sincronizacao das demais bordas.
-
-Para publicacao, o caminho e atualizar o dataset estatico por `scripts/export_static_market_data.py`, fora da interacao do usuario. A pagina publicada nunca consulta o Banco Central diretamente.
-
-O cache operacional e JSON local em `cache/`. Ele usa lock por arquivo e escrita atomica para reduzir risco de corrupcao em acessos concorrentes.
 
 ## Etapa 3: conversao do capital para dolar
 
@@ -159,4 +149,47 @@ Nesta versao, o nucleo obrigatorio continua sendo:
 - USD/BRL
 - comparacao de poder relativo em dolar
 
-As decisoes extraidas da fase exploratoria foram consolidadas nesta documentacao e nos testes. A regra operacional deve viver no pacote `armadilha_cdi/`.
+A UI separa capital em BRL, cambio e posicao em USD, sem apresentar conclusao de poder de compra real. O nome tecnico `real_usd_return_percentage` e preservado por compatibilidade; nao desconta inflacao americana.
+
+
+## Contrato de calculo
+
+Contrato vigente, consolidado do antigo documento de migracao em 09/11/2026. A referencia implementada e [calculate_result](../armadilha_cdi/services/calculations.py), com retorno [CalculationResult](../armadilha_cdi/models.py). O equivalente JavaScript e `calculateResult` em [calculations.js](../public/assets/calculations.js).
+
+```python
+calculate_result(
+    start_date: date,
+    end_date: date,
+    initial_brl: float,
+    cdi_rates: dict[str, float],
+    usd_rates: dict[str, float],
+) -> CalculationResult
+```
+
+Entradas: periodo com `end_date > start_date`, inicio em ou depois de `1994-07-01`, capital maior que zero e mapas de CDI diario percentual/PTAX venda por data ISO `YYYY-MM-DD`. Datas Python usam `date`; o JavaScript recebe strings ISO e argumentos `startDate`, `endDate`, `initialBrl`, `cdiRates`, `usdRates`.
+
+Campos de retorno compartilhados:
+
+| Grupo | Campos |
+| --- | --- |
+| Periodo | `start_date`, `end_date`, `effective_start_date`, `effective_end_date` |
+| Capital/CDI | `initial_brl`, `final_brl`, `cdi_factor`, `cdi_percentage`, `cdi_days_used` |
+| Cambio | `initial_usdbrl`, `final_usdbrl`, `initial_fx_date`, `final_fx_date` |
+| Posicao em USD | `initial_usd`, `final_usd_with_cdi`, `real_usd_return_percentage` |
+
+A UI informa o periodo efetivo quando difere do solicitado e destaca a PTAX quando sua data difere da data efetiva de mercado. O grafico utiliza o mesmo ajuste de datas do resultado.
+
+## Cenarios de validacao
+
+| Cenario | Comportamento obrigatorio |
+| --- | --- |
+| Periodo curto em dias uteis | Inicio inclusivo e fim exclusivo no CDI |
+| Fim de semana/feriado | Usa pontos oficiais anteriores dentro da tolerancia |
+| Inicio do real | Rejeita datas anteriores; aceita primeiro CDI proximo dentro da tolerancia |
+| PTAX ausente | Usa cotacao anterior em ate 15 dias; falha fora da tolerancia |
+| Periodo/valor invalido | Erro claro para fim menor/igual ao inicio e capital menor/igual a zero |
+| Dados insuficientes | Erro claro, sem inventar pontos |
+| Linhas malformadas | Ignora datas/taxas invalidas nas series |
+| Grafico | Apenas datas oficiais de CDI, com fallback equivalente ao resultado |
+
+O [comparador](../scripts/validate_static_reference_cases.py) verifica `final_brl`, `cdi_percentage`, datas efetivas de mercado/PTAX, `real_usd_return_percentage` e `cdi_days_used`. Tolerancias documentadas: `1e-9` para testes sinteticos e `1e-7` para comparacao com datasets exportados. Os caminhos dos testes estao na [arquitetura](arquitetura.md#responsabilidades-e-verificacao).

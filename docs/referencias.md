@@ -1,5 +1,7 @@
 # Referencias
 
+Fontes das series usadas pela [metodologia](metodologia.md) e pela [integracao de dados](arquitetura.md). Para atualizacao e diagnostico, consulte [publicacao](publicacao.md).
+
 ## Referencias oficiais de dados
 
 ### Banco Central do Brasil

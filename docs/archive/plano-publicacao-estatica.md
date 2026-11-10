@@ -22,4 +22,4 @@ Este arquivo e um registro historico da migracao para a publicacao estatica.
 
 ## Estado
 
-Migracao concluida. Este documento nao e roteiro ativo; use `README.md`, `AGENTS.md`, `docs/arquitetura.md`, `docs/publicacao.md` e `docs/dataset-estatico.md` para operacao atual.
+Migracao concluida. Este documento nao e roteiro ativo; consulte o [mapa de contexto vigente](../README.md) para operacao atual.

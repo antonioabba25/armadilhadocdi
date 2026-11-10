@@ -1,76 +1,69 @@
-# Publicacao
+# Publicacao e Operacao
 
-Este projeto tem uma unica superficie publicada: a versao estatica em Cloudflare Pages.
+## Destino e responsabilidades
 
-## Publicacao estatica em Cloudflare Pages
+- Site direto: https://armadilhadocdi.antonioabba.workers.dev/
+- [Repositorio](https://github.com/antonioabba25/armadilhadocdi).
+- [Atualizacao de dados](https://github.com/antonioabba25/armadilhadocdi/actions/workflows/update-static-market-data.yml).
+- Artefato: somente `public/`, incluindo `assets/` e `data/`.
 
-A versao estatica fica em `public/` e usa dados pre-gerados em `public/data/`. O navegador carrega `market-data.latest.json`, calcula localmente e nao consulta o Banco Central durante a interacao do usuario.
+A hospedagem observada em 09/11/2026 usa Cloudflare Workers, com check `Workers Builds: armadilhadocdi`. A configuracao de deploy e mantida externamente; nao ha arquivo Wrangler versionado. Verifique o painel antes de alterar build, dominio ou bindings. O [guia antigo de Pages](archive/guia-cloudflare-pages.md) foi arquivado e nao descreve a configuracao atual.
 
-### Build e saida
+O navegador calcula a partir de `data/market-data.latest.json`. O [manifesto publicado](https://armadilhadocdi.antonioabba.workers.dev/data/market-data.manifest.json) permite inspecao rapida de cobertura e contagens. Consulte o [schema](dataset-estatico.md) para distinguir geracao, periodo solicitado e datas realmente disponiveis.
 
-- Framework preset: nenhum, static site ou equivalente.
-- Build command recomendado:
+## Validacao local
 
 ```bash
 python3 -m pip install -r requirements.txt
 python3 -m unittest discover -s tests -v
 npm run test:js
-python3 scripts/export_static_market_data.py --start 1994-07-01
 python3 scripts/validate_static_reference_cases.py
-```
-
-- Output directory: `public`.
-
-Se o deploy consumir os arquivos ja commitados em `public/data/`, o build command pode ser reduzido a testes e validacao. O workflow `.github/workflows/update-static-market-data.yml` ja atualiza diariamente o dataset e commita apenas `public/data/market-data.latest.json` e `public/data/market-data.manifest.json`.
-
-### Variaveis e segredos
-
-O caminho padrao usa cache JSON local em `cache/` e nao exige segredos.
-
-Nao publique credenciais dentro de `public/` nem em arquivos versionados. O exportador valida o dataset para bloquear texto com aparencia de segredo antes da escrita.
-
-### Checklist de preview
-
-1. Rode os testes locais:
-
-```bash
-python3 -m unittest discover -s tests -v
-npm run test:js
-```
-
-2. Gere ou atualize os dados:
-
-```bash
-python3 scripts/export_static_market_data.py --start 1994-07-01
-python3 scripts/validate_static_reference_cases.py
-```
-
-3. Sirva a pasta `public/` localmente:
-
-```bash
 python3 -m http.server 8000 --directory public
 ```
 
-4. Acesse `http://localhost:8000`, teste um periodo recente, um historico e um com fim de semana.
+Abra http://localhost:8000. Teste periodo recente, historico desde 01/07/1994, fim de semana, periodo invertido e valor zero. Confira as tres perspectivas, o grafico, os avisos e os metadados. Os testes de texto da UI nao substituem a verificacao visual/interativa.
 
-5. No Cloudflare Pages, confira se `/data/market-data.latest.json` e `/data/market-data.manifest.json` respondem em navegador anonimo.
+## Atualizacao de dados
 
-6. Confirme que a tela mostra a data de ultima geracao, a cobertura disponivel e avisos quando a PTAX usada difere da data efetiva.
+Para sincronizar o cache manualmente:
 
-### Operacao continua
+```bash
+python3 scripts/sync_market_data.py --start 2020-01-01
+```
 
-O workflow `Update static market data` roda em dias uteis e pode ser acionado manualmente no GitHub Actions. Ele:
+Para exportar toda a janela suportada e validar:
 
-- restaura o cache local do workflow;
-- instala as dependencias Python;
-- roda testes Python e JavaScript;
-- exporta o dataset estatico;
-- valida equivalencia Python/JavaScript;
-- commita somente os arquivos de `public/data/` quando houver alteracao.
+```bash
+python3 scripts/export_static_market_data.py --start 1994-07-01
+python3 scripts/validate_static_reference_cases.py
+```
 
-### Recuperacao em caso de falha de dados
+A exportacao escreve os dois JSON versionados em `public/data/`; revise as alteracoes antes de commitar. `cache/` e apoio operacional local, com lock e escrita atomica, e nao deve ser publicado/versionado. A integracao BCB divide consultas longas de CDI e trata janelas oficialmente vazias; detalhes de implementacao em [arquitetura](arquitetura.md).
 
-- Se o workflow diario falhar porque o Banco Central ainda nao publicou dados recentes, a pagina publicada continua usando o ultimo JSON valido.
-- Rode `Update static market data` manualmente depois da publicacao oficial dos dados.
-- Se a validacao cruzada falhar, nao force o commit do dataset; investigue primeiro diferencas entre `public/assets/calculations.js` e `armadilha_cdi/services/calculations.py`.
-- Se o cache local do CI ficar corrompido, limpe o cache do workflow e execute novamente. O exportador reconstruira os arquivos a partir do Banco Central.
+O [workflow](../.github/workflows/update-static-market-data.yml) tem agendamento `30 22 * * 1-5` (22h30 UTC, 19h30 em America/Sao_Paulo no fuso UTC-3) e acionamento manual. A execucao real pode atrasar. Ele restaura cache, instala dependencias, testa, exporta, valida equivalencia e commita apenas dataset/manifesto quando alterados.
+
+## Verificacao da publicacao
+
+1. Acesse o site direto e confirme que o carregamento termina e a analise padrao aparece.
+2. Confira HTTP 200 e conteudo correto para pagina, CSS, tres modulos JS e ambos os JSON. Nao use somente `HEAD` para testar encurtadores; o link informado via Linktree exigiu `GET`.
+3. Compare `generated_at`, `coverage.end_date`, `coverage.cdi_end_date` e `coverage.usd_end_date`. Geracao recente nao implica series recentes.
+4. Compare a publicacao com o commit/dataset remoto esperado; a copia local pode estar atrasada.
+5. Baixe o dataset publicado para um caminho temporario e rode `python3 scripts/validate_static_reference_cases.py --dataset CAMINHO_DO_JSON`. Isso compara as implementacoes locais com os dados publicados; para validar o codigo em producao, confirme tambem se os modulos JS publicados correspondem aos locais.
+6. Teste os cenarios da validacao local no site. Para mudancas de layout, verifique desktop e celular. Confirme a recuperacao depois de uma entrada invalida.
+
+## Diagnostico e recuperacao
+
+| Sintoma | Investigacao |
+| --- | --- |
+| Site abre, mas dados estao antigos | Confira limites de cada serie, workflow, resposta BCB, cache e se o deploy incorporou o commit |
+| Build/workflow verde, cobertura antiga | Sucesso tecnico nao garante frescor; identifique qual serie limita `coverage.end_date` |
+| Interface presa no carregamento | Confira caminho e conteudo do JSON, status HTTP, schema e erros no navegador |
+| Comparador diverge | Investigue nucleo Python/JS; nao force commit de dataset para contornar a falha |
+| Cache corrompido | Limpe/reconstrua o cache operacional afetado e execute a exportacao novamente |
+| BCB temporariamente indisponivel | Preserve o ultimo JSON valido; repita apos a normalizacao |
+
+O caminho padrao dos scripts nao exige segredos; isso nao descreve as credenciais da infraestrutura de hospedagem. Nunca coloque credenciais em `public/` ou arquivos versionados. A exportacao valida schema e texto com aparencia de segredo.
+
+## Pendencias observadas em 09/11/2026
+
+A [verificacao datada](archive/verificacao-publicacao-2026-11-09.md) encontrou o site funcionando, com CDI ate 05/11 e PTAX ate 30/10, embora o arquivo tivesse sido gerado em 06/11. A causa da defasagem da PTAX nao foi determinada. Investigar provider/cache/fonte antes de atribuir causa ao BCB. A UI em celular ainda precisa ser verificada. Atualize esta secao quando houver nova evidencia; o relatorio historico deve manter sua data e escopo.
