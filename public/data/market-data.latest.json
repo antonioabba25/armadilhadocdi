@@ -8125,13 +8125,13 @@
     "cdi_end_date": "2026-11-09",
     "cdi_start_date": "1994-07-04",
     "end_date": "2026-10-30",
-    "requested_end_date": "2026-11-11",
+    "requested_end_date": "2026-11-12",
     "requested_start_date": "1994-07-01",
     "start_date": "1994-07-01",
     "usd_end_date": "2026-10-30",
     "usd_start_date": "1994-07-01"
   },
-  "generated_at": "2026-11-11T02:03:20Z",
+  "generated_at": "2026-11-12T03:13:29Z",
   "limits": {
     "earliest_supported_date": "1994-07-01",
     "max_market_date_fallback_days": 15,
